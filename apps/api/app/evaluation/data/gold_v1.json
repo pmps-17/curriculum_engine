@@ -1,0 +1,52 @@
+[
+  {
+    "id": "eval-001",
+    "title": "Lesson: The Rock Cycle",
+    "subject": "Science",
+    "grade_band": "Grade 5",
+    "lesson_text": "Students will explore the rock cycle by examining how igneous, sedimentary, and metamorphic rocks form and transform. In this activity, students will sort rock samples, identify their properties, and explain how heat, pressure, and erosion drive the cycle. The assessment rubric requires students to diagram the full cycle and justify each transformation with evidence.",
+    "rubric_text": "Students must correctly identify all three rock types, explain at least two transformation processes, and present their findings using a visual diagram with written justifications.",
+    "expected_pillars": ["P3", "P5"],
+    "expected_skills": []
+  },
+  {
+    "id": "eval-002",
+    "title": "Lesson: Persuasive Essay Writing",
+    "subject": "English Language Arts",
+    "grade_band": "Grade 7",
+    "lesson_text": "Students will learn to construct a persuasive essay using evidence-based arguments. They will identify a position, research supporting evidence, organize their argument with claim-evidence-reasoning structure, and revise their drafts using peer feedback. The lesson culminates in a class debate where students defend their written positions orally.",
+    "rubric_text": null,
+    "expected_pillars": ["P2", "P3"],
+    "expected_skills": []
+  },
+  {
+    "id": "eval-003",
+    "title": "Lesson: Collaborative Data Analysis",
+    "subject": "Mathematics",
+    "grade_band": "Grade 6",
+    "lesson_text": "Working in teams of four, students will collect survey data from classmates about screen-time habits. Each team will organize the data into frequency tables, calculate mean, median, and mode, create bar charts and histograms, and present their findings to the class. Teams must compare their results with published national averages and discuss possible sources of bias in their data collection.",
+    "rubric_text": "Teams are assessed on accuracy of calculations, quality of visual representations, clarity of oral presentation, and depth of analysis comparing local vs national data.",
+    "expected_pillars": ["P2", "P3", "P5"],
+    "expected_skills": []
+  },
+  {
+    "id": "eval-004",
+    "title": "Lesson: Ecosystem Interdependence Simulation",
+    "subject": "Science",
+    "grade_band": "Grade 4",
+    "lesson_text": "Students participate in a classroom simulation where each student represents an organism in a pond ecosystem. They act out food-web relationships and observe what happens when one species is removed. Students record observations in their science journals, draw before-and-after food web diagrams, and write a paragraph explaining why biodiversity matters for ecosystem stability.",
+    "rubric_text": null,
+    "expected_pillars": ["P3"],
+    "expected_skills": []
+  },
+  {
+    "id": "eval-005",
+    "title": "Lesson: Historical Document Analysis and Debate",
+    "subject": "Social Studies",
+    "grade_band": "Grade 8",
+    "lesson_text": "Students will analyze primary source documents from the American Revolution, including letters, newspaper editorials, and political pamphlets. They will evaluate the reliability and perspective of each source, identify bias, and synthesize evidence from multiple documents to form their own position. The lesson concludes with a structured debate where students argue for or against independence using only evidence from the primary sources. Students must write a reflection essay evaluating how their thinking changed during the debate.",
+    "rubric_text": "Students are graded on source analysis depth, quality of evidence used in debate, persuasiveness of oral arguments, and reflective writing that demonstrates metacognitive awareness.",
+    "expected_pillars": ["P2", "P3", "P5"],
+    "expected_skills": []
+  }
+]
