@@ -21,9 +21,9 @@ Schools upload curriculum documents (scope & sequence, unit plans, assessments, 
 
 | Code | Pillar |
 |------|--------|
+| P1   | &mdash; |
 | P2   | &mdash; |
 | P3   | &mdash; |
-| P5   | &mdash; |
 
 ---
 
