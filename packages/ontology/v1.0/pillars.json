@@ -1,0 +1,197 @@
+[
+  {
+    "pillar_code": "P1",
+    "name": "Body and Health Intelligence",
+    "definition": "The developmental domain that builds physical wellbeing foundations for learning and life. It covers age-appropriate knowledge, habits, and routines related to nutrition, hydration, sleep, movement, posture, hygiene, safety, and self-care. The intent is educational and preventive: children learn how daily physical choices affect energy, attention, mood stability, and long-term health.",
+    "primary_outcomes": [
+      "Learner can describe and practice basic health-supporting habits (sleep, food, movement).",
+      "Learner demonstrates awareness of how body states affect learning readiness (focus, energy, calm).",
+      "Learner practices safe and hygienic routines appropriate to age-stage.",
+      "Learner can make simple wellbeing decisions (healthy snack choice, hydration reminder, movement breaks)."
+    ],
+    "in_scope": [
+      "Nutrition and food literacy (balanced meals, mindful eating, reading simple nutrition cues).",
+      "Hydration routines and body signals (thirst, fatigue).",
+      "Sleep hygiene and routines (bedtime consistency, screen impact education).",
+      "Physical movement (daily movement habits, stretching, body breaks, basic fitness concepts).",
+      "Posture, ergonomics, and injury prevention for study routines.",
+      "Personal hygiene (handwashing, dental care routines, cleanliness habits).",
+      "Basic safety and self-care (safe physical practices, simple first-aid awareness, body boundaries in safety context).",
+      "Health habit tracking or reflection as learning (journals, checklists, class routines)."
+    ],
+    "out_of_scope": [
+      "Medical diagnosis, prescribing, or treatment recommendations.",
+      "Mental health clinical therapy (covered only if framed as emotional learning, not medical).",
+      "Sports performance optimization unless explicitly tied to health/wellbeing routines.",
+      "Sensitive personal health data collection (medical history, conditions) without explicit consent and governance."
+    ],
+    "curriculum_evidence_signals": {
+      "objective_signals": [
+        "understand nutrition/hydration/sleep",
+        "identify healthy habits",
+        "explain why sleep matters",
+        "describe hygiene routines",
+        "recognize body signals (tired, hungry, stressed)"
+      ],
+      "instruction_signals": [
+        "movement breaks / stretching routine",
+        "healthy snack planning activity",
+        "sleep routine journal",
+        "classroom hygiene procedure practice",
+        "body awareness check-in (energy level)",
+        "safety drill or safe-use procedure"
+      ],
+      "assessment_signals": [
+        "habit tracker rubric",
+        "reflection on changes in energy/focus",
+        "quiz on nutrition/sleep concepts",
+        "demonstration checklist (hygiene/safety steps)"
+      ]
+    },
+    "common_false_positives": [
+      "Sports story reading (P3) where health is not taught—just content.",
+      "Biology/physiology academic lesson (P3) that explains body systems but does not teach habits/routines.",
+      "General ‘wellbeing’ mention without explicit routine/habit instruction or assessment."
+    ],
+    "age_stage_emphasis": {
+      "K-2": "Habits and routines: hygiene, movement breaks, simple food/sleep routines, safety basics.",
+      "3-5": "Body signals, basic nutrition concepts, routine planning, simple self-care responsibility.",
+      "6-8": "Puberty-safe wellbeing education (governed), sleep/screen balance, fitness literacy, stress-body connection (non-clinical).",
+      "9-12": "Independent health decision-making, lifestyle planning, long-term wellbeing literacy (non-medical)."
+    },
+    "governance_notes": [
+      "Avoid storing sensitive health attributes; treat this as education/habit domain.",
+      "If collecting habit check-ins, store as non-sensitive routine completion unless explicit consent exists.",
+      "Separate wellbeing education from medical guidance in UI and outputs."
+    ]
+  },
+  {
+    "pillar_code": "P2",
+    "name": "Emotional and Mental Intelligence",
+    "definition": "The developmental domain that builds emotional awareness, self-regulation, stress management, resilience, and reflective capacity. It includes learning to identify emotions, manage impulses, respond to challenges calmly, develop coping strategies, and build mental habits that support wellbeing and learning readiness. The intent is skill development and education—not clinical diagnosis or therapy.",
+    "primary_outcomes": [
+      "Learner can identify and name emotions in self/others using age-appropriate vocabulary.",
+      "Learner applies coping strategies (pause, breathing, journaling, asking for help).",
+      "Learner demonstrates self-regulation and impulse control in learning contexts.",
+      "Learner reflects on choices, consequences, and emotional responses.",
+      "Learner builds resilience: handles setbacks and continues effort."
+    ],
+    "in_scope": [
+      "Emotion vocabulary development and recognition activities.",
+      "Self-regulation skills (pause/plan, breathing, grounding, calming routines).",
+      "Stress-awareness education (what stress feels like, how to respond).",
+      "Resilience building (growth mindset practices, coping with failure, recovery routines).",
+      "Reflection practices (journaling, guided reflection, feelings check-in).",
+      "Help-seeking and emotional safety routines (asking for support, trusted adult).",
+      "Classroom SEL routines that explicitly teach emotional skills."
+    ],
+    "out_of_scope": [
+      "Clinical mental health diagnosis or treatment plans.",
+      "Collection of sensitive mental health records without consent/governance.",
+      "Purely disciplinary rules or compliance behaviors without emotional learning content."
+    ],
+    "curriculum_evidence_signals": {
+      "objective_signals": [
+        "identify emotions",
+        "manage stress",
+        "practice self-regulation",
+        "develop resilience",
+        "reflect on feelings and choices"
+      ],
+      "instruction_signals": [
+        "guided reflection journal",
+        "feelings check-in circle",
+        "role-play handling conflict calmly",
+        "breathing/grounding practice",
+        "coping plan creation",
+        "mindfulness activity (non-religious, classroom-safe)"
+      ],
+      "assessment_signals": [
+        "rubric for reflection quality (insight, coping strategy use)",
+        "self-regulation checklist",
+        "scenario-based response evaluation",
+        "teacher observation rubric (calm response, impulse control)"
+      ]
+    },
+    "common_false_positives": [
+      "Moral story reading where the lesson is not explicitly teaching emotional skills (often P3).",
+      "General ‘behave nicely’ rules without skills instruction.",
+      "Any mention of ‘feelings’ in literature analysis that is purely academic comprehension (P3)."
+    ],
+    "age_stage_emphasis": {
+      "K-2": "Emotional vocabulary, safety, routines for calming, simple reflection.",
+      "3-5": "Impulse control, empathy basics, coping strategies, responsibility for emotional responses.",
+      "6-8": "Identity-aware emotional guidance, stress coping, resilience, ethical reflection (non-clinical).",
+      "9-12": "Decision pressure coping, long-term resilience, burnout prevention literacy, reflective judgement."
+    },
+    "governance_notes": [
+      "Keep outputs educational and descriptive; avoid labeling a child clinically.",
+      "If storing reflections, treat as sensitive student content and apply privacy controls.",
+      "Review workflow should allow schools to approve SEL mapping to avoid misinterpretation."
+    ]
+  },
+  {
+    "pillar_code": "P3",
+    "name": "Thinking and Learning Intelligence",
+    "definition": "The developmental domain that builds cognition and learning capability: comprehension, reasoning, inquiry, problem-solving, conceptual understanding, and applied learning strategies. It includes how learners build knowledge, connect ideas, analyze evidence, and transfer learning to real contexts. This pillar covers both academic learning and meta-learning (how to learn).",
+    "primary_outcomes": [
+      "Learner demonstrates comprehension and can explain meaning with evidence.",
+      "Learner applies reasoning to solve problems and justify decisions.",
+      "Learner asks questions, investigates, and draws conclusions (inquiry).",
+      "Learner can transfer knowledge to real-world scenarios.",
+      "Learner develops learning strategies (planning, revision, self-check)."
+    ],
+    "in_scope": [
+      "Academic comprehension (reading, math, science, social studies understanding).",
+      "Reasoning and logic (why/how explanation, proof, justification).",
+      "Problem solving (multi-step solutions, strategy selection, debugging thinking).",
+      "Inquiry-based learning and projects (ask-investigate-analyze-conclude).",
+      "Critical thinking (evaluate sources, compare claims, evidence-based conclusion).",
+      "Learning strategies (note-taking, retrieval practice, self-checking, revision).",
+      "Applied learning using real-life contexts (word problems, scenarios, case studies)."
+    ],
+    "out_of_scope": [
+      "Pure communication skill training (not in current pillar set).",
+      "Emotional regulation skill training unless the intent is self-regulation (then P2).",
+      "Health habit instruction unless the intent is wellbeing routines (then P1)."
+    ],
+    "curriculum_evidence_signals": {
+      "objective_signals": [
+        "analyze and explain",
+        "solve using reasoning",
+        "interpret evidence",
+        "apply concepts to a scenario",
+        "investigate and conclude"
+      ],
+      "instruction_signals": [
+        "read and summarize",
+        "solve word problems",
+        "conduct an experiment and record observations",
+        "compare two sources",
+        "think-pair-share for reasoning (note: content is P3, delivery is social)"
+      ],
+      "assessment_signals": [
+        "rubric for reasoning steps",
+        "written explanation with evidence",
+        "problem-solving checklist",
+        "project evaluation criteria (hypothesis, method, conclusion)"
+      ]
+    },
+    "common_false_positives": [
+      "Group discussion activities that are primarily about collaboration/communication (not in current pillar set) rather than reasoning content.",
+      "Reflection writing that is purely SEL (P2) without cognitive learning goals.",
+      "Health lesson explaining body systems with no habit/routine learning (still P3 academic, not P1)."
+    ],
+    "age_stage_emphasis": {
+      "K-2": "Concrete learning, foundational literacy/numeracy, curiosity questions, simple applied examples.",
+      "3-5": "Reasoning growth, inquiry projects, responsibility for learning, early real-life applications.",
+      "6-8": "Abstract thinking, analytical reasoning, evidence evaluation, structured inquiry.",
+      "9-12": "Complex problem solving, synthesis across domains, independent learning strategies, real-world modeling."
+    },
+    "governance_notes": [
+      "This pillar is dominant in most school systems; mapping should avoid over-attributing everything to P3.",
+      "Explainability should clearly show why a chunk maps to P3 vs P2/P1 when overlaps exist.",
+      "Use review overrides when academic content is misinterpreted as SEL or wellbeing."
+    ]
+  }
+]

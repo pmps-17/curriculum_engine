@@ -1,0 +1,119 @@
+[
+  { "skill_code": "P1.S1", "indicator_type": "objective", "indicator_text": "describe what makes a balanced meal", "strength": "high" },
+  { "skill_code": "P1.S1", "indicator_type": "objective", "indicator_text": "explain how food affects energy and focus", "strength": "high" },
+  { "skill_code": "P1.S1", "indicator_type": "instruction", "indicator_text": "build a balanced plate activity", "strength": "high" },
+  { "skill_code": "P1.S1", "indicator_type": "instruction", "indicator_text": "compare breakfast choices for energy", "strength": "medium" },
+  { "skill_code": "P1.S1", "indicator_type": "assessment", "indicator_text": "balanced meal checklist or rubric", "strength": "high" },
+
+  { "skill_code": "P1.S2", "indicator_type": "objective", "indicator_text": "distinguish whole foods from processed foods", "strength": "high" },
+  { "skill_code": "P1.S2", "indicator_type": "objective", "indicator_text": "identify ultra-processed foods and additives", "strength": "medium" },
+  { "skill_code": "P1.S2", "indicator_type": "instruction", "indicator_text": "sort foods into whole vs processed categories", "strength": "high" },
+  { "skill_code": "P1.S2", "indicator_type": "instruction", "indicator_text": "discuss added sugar and hidden sugar", "strength": "medium" },
+  { "skill_code": "P1.S2", "indicator_type": "assessment", "indicator_text": "food quality reflection rubric", "strength": "medium" },
+
+  { "skill_code": "P1.S3", "indicator_type": "objective", "indicator_text": "read ingredients list and identify added sugar", "strength": "high" },
+  { "skill_code": "P1.S3", "indicator_type": "objective", "indicator_text": "interpret nutrition label basics (sugar, fiber, sodium)", "strength": "high" },
+  { "skill_code": "P1.S3", "indicator_type": "instruction", "indicator_text": "nutrition label reading activity", "strength": "high" },
+  { "skill_code": "P1.S3", "indicator_type": "instruction", "indicator_text": "compare two snack labels and choose healthier option", "strength": "high" },
+  { "skill_code": "P1.S3", "indicator_type": "assessment", "indicator_text": "label reading quiz or checklist", "strength": "high" },
+
+  { "skill_code": "P1.S4", "indicator_type": "objective", "indicator_text": "explain portion size and serving size", "strength": "medium" },
+  { "skill_code": "P1.S4", "indicator_type": "objective", "indicator_text": "plan a balanced plate with portions", "strength": "high" },
+  { "skill_code": "P1.S4", "indicator_type": "instruction", "indicator_text": "portion estimation activity (hand method)", "strength": "medium" },
+  { "skill_code": "P1.S4", "indicator_type": "instruction", "indicator_text": "create a healthy plate poster", "strength": "medium" },
+  { "skill_code": "P1.S4", "indicator_type": "assessment", "indicator_text": "meal plan rubric (balance and portion awareness)", "strength": "medium" },
+
+  { "skill_code": "P1.S5", "indicator_type": "objective", "indicator_text": "recognize thirst and dehydration signs", "strength": "high" },
+  { "skill_code": "P1.S5", "indicator_type": "objective", "indicator_text": "explain how hydration supports focus", "strength": "medium" },
+  { "skill_code": "P1.S5", "indicator_type": "instruction", "indicator_text": "hydration tracking activity", "strength": "medium" },
+  { "skill_code": "P1.S5", "indicator_type": "instruction", "indicator_text": "water reminder routine for class", "strength": "low" },
+  { "skill_code": "P1.S5", "indicator_type": "assessment", "indicator_text": "hydration habit tracker checklist", "strength": "medium" },
+
+  { "skill_code": "P1.S6", "indicator_type": "objective", "indicator_text": "identify hunger and fullness cues", "strength": "high" },
+  { "skill_code": "P1.S6", "indicator_type": "objective", "indicator_text": "describe mindful eating habits", "strength": "medium" },
+  { "skill_code": "P1.S6", "indicator_type": "instruction", "indicator_text": "mindful eating exercise (notice taste, pace)", "strength": "medium" },
+  { "skill_code": "P1.S6", "indicator_type": "instruction", "indicator_text": "discuss distractions while eating (screens)", "strength": "low" },
+  { "skill_code": "P1.S6", "indicator_type": "assessment", "indicator_text": "reflection on hunger/fullness awareness", "strength": "medium" },
+
+  { "skill_code": "P1.S7", "indicator_type": "objective", "indicator_text": "explain safe food handling steps", "strength": "medium" },
+  { "skill_code": "P1.S7", "indicator_type": "objective", "indicator_text": "describe handwashing steps and why they matter", "strength": "high" },
+  { "skill_code": "P1.S7", "indicator_type": "instruction", "indicator_text": "practice handwashing procedure", "strength": "high" },
+  { "skill_code": "P1.S7", "indicator_type": "instruction", "indicator_text": "food safety checklist activity", "strength": "medium" },
+  { "skill_code": "P1.S7", "indicator_type": "assessment", "indicator_text": "hygiene demonstration checklist", "strength": "high" },
+
+  { "skill_code": "P1.S8", "indicator_type": "objective", "indicator_text": "describe healthy bedtime routine", "strength": "high" },
+  { "skill_code": "P1.S8", "indicator_type": "objective", "indicator_text": "explain how sleep affects memory and mood", "strength": "high" },
+  { "skill_code": "P1.S8", "indicator_type": "instruction", "indicator_text": "sleep journal or routine tracker", "strength": "high" },
+  { "skill_code": "P1.S8", "indicator_type": "instruction", "indicator_text": "discuss screen time and sleep quality", "strength": "medium" },
+  { "skill_code": "P1.S8", "indicator_type": "assessment", "indicator_text": "sleep routine reflection rubric", "strength": "medium" },
+
+  { "skill_code": "P1.S9", "indicator_type": "objective", "indicator_text": "explain benefits of daily physical activity", "strength": "high" },
+  { "skill_code": "P1.S9", "indicator_type": "instruction", "indicator_text": "movement break routine during class", "strength": "medium" },
+  { "skill_code": "P1.S9", "indicator_type": "instruction", "indicator_text": "stretching sequence practice", "strength": "medium" },
+  { "skill_code": "P1.S9", "indicator_type": "assessment", "indicator_text": "movement habit tracker", "strength": "low" },
+
+  { "skill_code": "P1.S10", "indicator_type": "objective", "indicator_text": "identify correct posture for studying", "strength": "medium" },
+  { "skill_code": "P1.S10", "indicator_type": "instruction", "indicator_text": "ergonomic desk setup checklist", "strength": "medium" },
+  { "skill_code": "P1.S10", "indicator_type": "assessment", "indicator_text": "posture and ergonomics self-check rubric", "strength": "low" },
+
+  { "skill_code": "P1.S11", "indicator_type": "instruction", "indicator_text": "daily hygiene routine checklist", "strength": "medium" },
+  { "skill_code": "P1.S11", "indicator_type": "assessment", "indicator_text": "self-care routine reflection", "strength": "low" },
+
+  { "skill_code": "P1.S12", "indicator_type": "objective", "indicator_text": "recognize unsafe situations and choose safe actions", "strength": "medium" },
+  { "skill_code": "P1.S12", "indicator_type": "instruction", "indicator_text": "safety rules discussion (home/school)", "strength": "low" },
+
+  { "skill_code": "P1.S14", "indicator_type": "instruction", "indicator_text": "habit tracker (sleep, water, movement, food)", "strength": "high" },
+  { "skill_code": "P1.S14", "indicator_type": "assessment", "indicator_text": "weekly wellbeing reflection journal", "strength": "medium" },
+
+  { "skill_code": "P1.S16", "indicator_type": "objective", "indicator_text": "compare cultural foods and plan balanced meals respectfully", "strength": "medium" },
+  { "skill_code": "P1.S16", "indicator_type": "instruction", "indicator_text": "food culture discussion with balanced choices", "strength": "low" },
+
+
+  { "skill_code": "P2.S1", "indicator_type": "objective", "indicator_text": "identify and name emotions", "strength": "high" },
+  { "skill_code": "P2.S1", "indicator_type": "instruction", "indicator_text": "feelings check-in activity", "strength": "medium" },
+  { "skill_code": "P2.S2", "indicator_type": "instruction", "indicator_text": "breathing or grounding exercise", "strength": "high" },
+  { "skill_code": "P2.S4", "indicator_type": "instruction", "indicator_text": "reflect on mistakes and try again (growth mindset)", "strength": "medium" },
+  { "skill_code": "P2.S6", "indicator_type": "assessment", "indicator_text": "reflection rubric (feelings, choices, coping)", "strength": "medium" },
+
+  { "skill_code": "P3.S1", "indicator_type": "objective", "indicator_text": "summarize the text using evidence", "strength": "high" },
+  { "skill_code": "P3.S1", "indicator_type": "instruction", "indicator_text": "read a passage and answer comprehension questions", "strength": "high" },
+  { "skill_code": "P3.S1", "indicator_type": "assessment", "indicator_text": "comprehension quiz with evidence-based answers", "strength": "high" },
+
+  { "skill_code": "P3.S2", "indicator_type": "objective", "indicator_text": "justify the answer with reasoning", "strength": "high" },
+  { "skill_code": "P3.S2", "indicator_type": "assessment", "indicator_text": "rubric for reasoning steps and justification", "strength": "high" },
+
+  { "skill_code": "P3.S3", "indicator_type": "instruction", "indicator_text": "solve multi-step word problems", "strength": "high" },
+  { "skill_code": "P3.S3", "indicator_type": "assessment", "indicator_text": "problem-solving checklist (strategy, check, revise)", "strength": "medium" },
+
+  { "skill_code": "P3.S4", "indicator_type": "instruction", "indicator_text": "evaluate a claim using evidence from sources", "strength": "high" },
+  { "skill_code": "P3.S4", "indicator_type": "instruction", "indicator_text": "compare two sources and identify differences", "strength": "medium" },
+
+  { "skill_code": "P3.S5", "indicator_type": "objective", "indicator_text": "ask questions and investigate", "strength": "medium" },
+  { "skill_code": "P3.S5", "indicator_type": "instruction", "indicator_text": "conduct an investigation and record observations", "strength": "high" },
+
+  { "skill_code": "P3.S6", "indicator_type": "objective", "indicator_text": "form a hypothesis and test it", "strength": "high" },
+  { "skill_code": "P3.S6", "indicator_type": "instruction", "indicator_text": "design an experiment with variables and controls", "strength": "high" },
+  { "skill_code": "P3.S6", "indicator_type": "assessment", "indicator_text": "lab report rubric (hypothesis, method, results, conclusion)", "strength": "high" },
+
+  { "skill_code": "P3.S7", "indicator_type": "instruction", "indicator_text": "interpret graphs and draw conclusions from data", "strength": "high" },
+  { "skill_code": "P3.S7", "indicator_type": "assessment", "indicator_text": "data analysis rubric (claims supported by data)", "strength": "high" },
+
+  { "skill_code": "P3.S8", "indicator_type": "instruction", "indicator_text": "identify cause and effect in a system", "strength": "medium" },
+  { "skill_code": "P3.S8", "indicator_type": "instruction", "indicator_text": "map inputs outputs and feedback loops", "strength": "medium" },
+
+  { "skill_code": "P3.S9", "indicator_type": "instruction", "indicator_text": "apply the concept to a real-life scenario", "strength": "high" },
+  { "skill_code": "P3.S9", "indicator_type": "instruction", "indicator_text": "case study analysis using learned concepts", "strength": "high" },
+  { "skill_code": "P3.S9", "indicator_type": "assessment", "indicator_text": "real-world application rubric (transfer of learning)", "strength": "high" },
+
+  { "skill_code": "P3.S10", "indicator_type": "instruction", "indicator_text": "use a model to represent and predict outcomes", "strength": "high" },
+  { "skill_code": "P3.S10", "indicator_type": "assessment", "indicator_text": "model explanation rubric (assumptions and predictions)", "strength": "medium" },
+
+  { "skill_code": "P3.S11", "indicator_type": "instruction", "indicator_text": "engineering design challenge (prototype test iterate)", "strength": "high" },
+  { "skill_code": "P3.S11", "indicator_type": "assessment", "indicator_text": "design rubric (constraints, testing, iteration)", "strength": "high" },
+
+  { "skill_code": "P3.S12", "indicator_type": "instruction", "indicator_text": "integrate math and science to solve a real problem", "strength": "high" },
+  { "skill_code": "P3.S12", "indicator_type": "assessment", "indicator_text": "interdisciplinary project rubric", "strength": "medium" },
+
+  { "skill_code": "P3.S14", "indicator_type": "instruction", "indicator_text": "plan study strategy and self-check progress", "strength": "medium" },
+  { "skill_code": "P3.S16", "indicator_type": "instruction", "indicator_text": "create a mind map or structured notes", "strength": "medium" }
+]
