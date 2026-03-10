@@ -40,7 +40,7 @@ router = APIRouter(prefix="/api/v1", tags=["Analysis"])
     description=(
         "Accepts raw curriculum/lesson text, normalises it, runs intake "
         "compliance checks, performs keyword-based pillar mapping for "
-        "P2/P3/P5, and returns scored, explainable results."
+        "P1/P2/P3, and returns scored, explainable results."
     ),
     responses={
         200: {"description": "Analysis completed successfully."},

@@ -49,7 +49,7 @@ class SkillScoreOut(CamelModel):
     id: UUID = Field(description="Skill score identifier.")
     skill_id: UUID = Field(description="Skill that was scored.")
     skill_code: str | None = Field(
-        default=None, description="Human-readable skill code (e.g. 'P2-S1')."
+        default=None, description="Human-readable skill code (e.g. 'P1-S1')."
     )
     skill_name: str | None = Field(
         default=None, description="Display name of the skill."
@@ -75,7 +75,7 @@ class PillarScoreOut(CamelModel):
     id: UUID = Field(description="Pillar score identifier.")
     pillar_id: UUID = Field(description="Pillar that was scored.")
     pillar_code: PillarCode | None = Field(
-        default=None, description="Pillar code (P2, P3, P5)."
+        default=None, description="Pillar code (P1, P2, P3)."
     )
     pillar_name: str | None = Field(
         default=None, description="Display name of the pillar."

@@ -69,11 +69,11 @@ class SectionType(str, enum.Enum):
 # ── Ontology ─────────────────────────────────────────────────────────
 
 class PillarCode(str, enum.Enum):
-    """Pillar identifiers for v1 (P2, P3, P5)."""
+    """Pillar identifiers for v1 (P1, P2, P3)."""
 
+    P1 = "P1"
     P2 = "P2"
     P3 = "P3"
-    P5 = "P5"
 
 
 class OntologyStatus(str, enum.Enum):

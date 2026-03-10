@@ -44,7 +44,7 @@ class OntologyVersion(TimestampMixin, Base):
 # ── Pillar ───────────────────────────────────────────────────────────
 
 class Pillar(TimestampMixin, Base):
-    """A high-level competency pillar (e.g. P2, P3, P5)."""
+    """A high-level competency pillar (e.g. P1, P2, P3)."""
 
     __tablename__ = "pillars"
 

@@ -129,20 +129,20 @@ def seeded_ontology(db: Session) -> OntologyVersion:
         weight=1.0,
     ))
 
-    # Pillar P5 — Communication
-    p5 = Pillar(
+    # Pillar P1 — Body and Health Intelligence
+    p1 = Pillar(
         ontology_version_id=ov.id,
-        code=PillarCode.P5,
-        name="Communication",
+        code=PillarCode.P1,
+        name="Body and Health Intelligence",
     )
-    db.add(p5)
+    db.add(p1)
     db.flush()
 
     s3 = Skill(
-        pillar_id=p5.id,
-        code="P5-S1",
-        name="Written Communication",
-        description="Clear and effective written expression.",
+        pillar_id=p1.id,
+        code="P1-S1",
+        name="Nutrition Foundations",
+        description="Understand basic nutrients, balanced meals, and how food impacts energy, focus, and mood.",
         sort_order=1,
     )
     db.add(s3)
@@ -150,16 +150,16 @@ def seeded_ontology(db: Session) -> OntologyVersion:
 
     db.add(SkillIndicator(
         skill_id=s3.id,
-        indicator_text="Writes clearly and effectively",
-        keywords="write, essay, draft, revise, paragraph, compose, articulate",
+        indicator_text="Understands nutrition and balanced meals",
+        keywords="nutrition, food, healthy, balanced, nutrients, meal, diet, energy",
         weight=1.0,
     ))
 
     s4 = Skill(
-        pillar_id=p5.id,
-        code="P5-S2",
-        name="Oral Presentation",
-        description="Presenting ideas clearly through speech.",
+        pillar_id=p1.id,
+        code="P1-S2",
+        name="Daily Movement Habits",
+        description="Practice regular movement and stretching; understand its role in focus, mood, and health.",
         sort_order=2,
     )
     db.add(s4)
@@ -167,8 +167,8 @@ def seeded_ontology(db: Session) -> OntologyVersion:
 
     db.add(SkillIndicator(
         skill_id=s4.id,
-        indicator_text="Presents ideas orally with clarity",
-        keywords="present, speak, debate, discuss, oral, presentation, defend",
+        indicator_text="Practices regular movement and exercise",
+        keywords="movement, exercise, physical, activity, stretching, motion, fitness, health",
         weight=1.0,
     ))
 
