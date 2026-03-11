@@ -21,7 +21,7 @@ import uuid
 from dataclasses import dataclass
 
 from app.models.curriculum import Chunk as ChunkModel, Section as SectionModel
-from app.models.enums import MatchMethod, SectionType
+from app.models.enums import MatchMethod, PillarCode, SectionType
 from app.models.ontology import OntologyVersion, Pillar, Skill, SkillIndicator
 from app.services.scoring_service import CandidateMatchInput
 
@@ -196,7 +196,7 @@ def run_keyword_matching(
                     skill_code=ctx.skill.code,
                     skill_name=ctx.skill.name,
                     pillar_id=ctx.pillar.id,
-                    pillar_code=ctx.pillar.code,
+                    pillar_code=PillarCode(ctx.pillar.code),
                     pillar_name=ctx.pillar.name,
                     indicator_id=ctx.indicator.id,
                     raw_score=raw_score,

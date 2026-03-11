@@ -16,6 +16,7 @@ from app.models.curriculum import (
     Chunk as ChunkModel,
     CurriculumItem,
     Document,
+    School,
     Section as SectionModel,
     UploadBatch,
 )
@@ -34,6 +35,20 @@ class CurriculumRepo:
     def __init__(self, db: Session) -> None:
         self._db = db
 
+    def get_document(self, document_id: uuid.UUID) -> Document | None:
+        """Retrieve a document by ID.
+
+        Args:
+            document_id: Document UUID
+
+        Returns:
+            Document model or None if not found
+        """
+        from sqlalchemy import select
+
+        stmt = select(Document).where(Document.id == document_id)
+        return self._db.scalars(stmt).first()
+
     def create_upload_batch_and_document(
         self,
         *,
@@ -45,8 +60,24 @@ class CurriculumRepo:
 
         Returns the batch and document (both flushed with IDs assigned).
         """
+        from sqlalchemy import select
+
+        resolved_school_id = school_id or uuid.uuid4()
+
+        # POC: auto-create school if it doesn't exist
+        stmt = select(School).where(School.id == resolved_school_id)
+        existing = self._db.scalars(stmt).first()
+        if not existing:
+            school = School(
+                id=resolved_school_id,
+                name=f"School {str(resolved_school_id)[:8]}",
+                description="Auto-created school for inline analysis",
+            )
+            self._db.add(school)
+            self._db.flush()
+
         batch = UploadBatch(
-            school_id=school_id or uuid.uuid4(),
+            school_id=resolved_school_id,
             status=UploadBatchStatus.COMPLETED,
             uploaded_by=uploaded_by,
         )

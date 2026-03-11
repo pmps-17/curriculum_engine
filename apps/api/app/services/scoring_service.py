@@ -34,6 +34,11 @@ from app.models.enums import MatchMethod, PillarCode, SectionType
 logger = logging.getLogger(__name__)
 
 
+def _ev(x: object) -> str:
+    """Return the ``.value`` of an enum, or the object itself if already a string."""
+    return x.value if hasattr(x, "value") else x  # type: ignore[return-value]
+
+
 # =====================================================================
 # Configuration — section-type weights
 # =====================================================================
@@ -84,6 +89,10 @@ class CandidateMatchInput:
 
     This is the service's *input contract*.  It does not depend on ORM
     models or API schemas.
+
+    ``skill_id`` is always set (the semantic unit).
+    ``indicator_id`` is set only for keyword matches that resolved to a
+    specific indicator; ``None`` for embedding-only matches.
     """
 
     candidate_id: UUID
@@ -95,7 +104,7 @@ class CandidateMatchInput:
     pillar_id: UUID
     pillar_code: PillarCode
     pillar_name: str
-    indicator_id: UUID
+    indicator_id: UUID | None
     raw_score: float
     match_method: MatchMethod
     matched_keywords: str | None = None
@@ -248,7 +257,7 @@ def _build_pillar_explanation(
 ) -> str:
     """Generate a human-readable explanation for a pillar score."""
     parts = [
-        f"Pillar {pillar_code.value}: aggregate score {score:.2f} "
+        f"Pillar {_ev(pillar_code)}: aggregate score {score:.2f} "
         f"across {skill_count} skill(s).",
     ]
     if taught:
@@ -288,7 +297,7 @@ def _score_skills(
         score = min(weighted_sum / MAX_WEIGHTED_SCORE_PER_SKILL, 1.0)
         confidence = _derive_confidence(score)
 
-        indicator_ids = {m.indicator_id for m in matches}
+        indicator_ids = {m.indicator_id for m in matches if m.indicator_id is not None}
         section_types = {m.section_type for m in matches}
         taught = _compute_taught_flag(section_types)
         assessed = _compute_assessed_flag(section_types)
@@ -321,7 +330,7 @@ def _score_skills(
         )
 
     # Sort for deterministic output
-    results.sort(key=lambda r: (r.pillar_code.value, r.skill_code))
+    results.sort(key=lambda r: (_ev(r.pillar_code), r.skill_code))
     return results
 
 
@@ -359,7 +368,7 @@ def _rollup_pillar_scores(
             PillarScoreResult(
                 pillar_id=pillar_id,
                 pillar_code=first.pillar_code,
-                pillar_name=first.pillar_code.value,  # use pillar_code as label
+                pillar_name=_ev(first.pillar_code),  # use pillar_code as label
                 score=round(avg_score, 4),
                 confidence=confidence,
                 skill_count=len(skills),
@@ -371,7 +380,7 @@ def _rollup_pillar_scores(
         )
 
     # Sort for deterministic output
-    results.sort(key=lambda r: r.pillar_code.value)
+    results.sort(key=lambda r: _ev(r.pillar_code))
     return results
 
 

@@ -114,6 +114,7 @@ def get_result(*, db: Session, analysis_run_id: UUID) -> ResultResponse:
                 pillar_id=pm.pillar_id,
                 pillar_code=pillar.code if pillar else None,
                 pillar_name=pillar.name if pillar else None,
+                pillar_description=pillar.description if pillar else None,
                 score=pm.score,
                 skill_count=pm.skill_count,
                 explanation=pm.explanation,
@@ -190,7 +191,7 @@ def get_result(*, db: Session, analysis_run_id: UUID) -> ResultResponse:
         updated_at=run.updated_at,
         curriculum_item_id=run.curriculum_item_id,
         title=ci.title if ci else None,
-        item_type=ci.item_type.value if ci else None,
+        item_type=ci.item_type if ci else None,
         subject_name=subject_name,
         unit_name=ci.unit_name if ci else None,
         grade_level=None,  # TODO: derive from package/subject metadata

@@ -213,12 +213,6 @@ def run_semantic_matching(
 
             pillar = skill.pillar
 
-            # Use the first indicator as the anchor (semantic match
-            # isn't indicator-specific, but scoring expects one).
-            indicator_id = (
-                skill.indicators[0].id if skill.indicators else skill.id
-            )
-
             candidates.append(
                 CandidateMatchInput(
                     candidate_id=uuid.uuid4(),
@@ -230,7 +224,7 @@ def run_semantic_matching(
                     pillar_id=pillar.id,
                     pillar_code=PillarCode(pillar.code),
                     pillar_name=pillar.name,
-                    indicator_id=indicator_id,
+                    indicator_id=None,  # semantic match is skill-level
                     raw_score=similarity,
                     match_method=MatchMethod.EMBEDDING,
                     matched_keywords=None,

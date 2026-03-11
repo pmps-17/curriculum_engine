@@ -18,13 +18,11 @@ from sqlalchemy.orm import Session
 from app.adapters.embeddings.base import EmbeddingProvider
 from app.adapters.vector_store.base import VectorStore
 from app.adapters.vector_store.pgvector_store import PgVectorStore
-from app.core.config import Settings, get_settings
+from app.core.config import get_settings
 
 
 @lru_cache(maxsize=1)
-def get_embedding_provider(
-    settings: Settings | None = None,
-) -> EmbeddingProvider:
+def get_embedding_provider() -> EmbeddingProvider:
     """Return a cached embedding provider instance.
 
     The provider is chosen by ``settings.EMBEDDING_PROVIDER``:
@@ -33,12 +31,6 @@ def get_embedding_provider(
       (sentence-transformers, runs in-process).
     - ``"openai"`` → :class:`OpenAIEmbeddingProvider`
       (calls the OpenAI embeddings API via httpx).
-
-    Parameters
-    ----------
-    settings:
-        Application settings.  Falls back to :func:`get_settings` when
-        ``None``.
 
     Returns
     -------
@@ -50,8 +42,7 @@ def get_embedding_provider(
     ValueError
         If the configured provider name is not recognised.
     """
-    if settings is None:
-        settings = get_settings()
+    settings = get_settings()
 
     provider_name = settings.EMBEDDING_PROVIDER
 

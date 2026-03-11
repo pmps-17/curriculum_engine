@@ -45,7 +45,8 @@ class CandidateRepo:
             m = CandidateMatch(
                 analysis_run_id=analysis_run_id,
                 chunk_id=chunk_id,
-                skill_indicator_id=c.indicator_id,
+                skill_id=c.skill_id,
+                skill_indicator_id=c.indicator_id,  # None for semantic matches
                 match_method=c.match_method,
                 raw_score=c.raw_score,
                 matched_keywords=c.matched_keywords,

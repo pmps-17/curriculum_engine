@@ -10,7 +10,7 @@ Covers:
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from app.models.enums import (
     AnalysisRunStatus,
@@ -80,6 +80,9 @@ class PillarScoreOut(CamelModel):
     pillar_name: str | None = Field(
         default=None, description="Display name of the pillar."
     )
+    pillar_description: str | None = Field(
+        default=None, description="Short description / definition of the pillar."
+    )
     score: float = Field(
         ge=0.0, le=1.0,
         description="Aggregate normalised score across skills in this pillar.",
@@ -141,16 +144,25 @@ class IntakeComplianceResultOut(CamelModel):
 class AnalyzeRequest(CamelModel):
     """Payload sent by the client to trigger a curriculum analysis run.
 
-    At minimum the client must provide ``curriculum_text``.  All other
-    fields add context that improves accuracy or enables richer
-    downstream reporting.
+    The client must provide EITHER ``curriculum_text`` OR ``document_id``:
+    - ``curriculum_text``: raw lesson/activity text to analyze
+    - ``document_id``: UUID of a previously uploaded document
+
+    All other fields add context for better accuracy and reporting.
     """
 
-    # ── Required ─────────────────────────────────────────────────────
-    curriculum_text: str = Field(
+    # ── Curriculum source (one required) ──────────────────────────────
+    curriculum_text: str | None = Field(
+        default=None,
         min_length=1,
         max_length=100_000,
-        description="Raw lesson / activity text to analyse (max 100 000 chars).",
+        description="Raw lesson/activity text to analyse (max 100 000 chars). "
+        "Either this or document_id is required.",
+    )
+    document_id: str | None = Field(
+        default=None,
+        description="UUID of a previously uploaded document. "
+        "Either this or curriculum_text is required.",
     )
 
     # ── Optional context ─────────────────────────────────────────────
@@ -205,12 +217,19 @@ class AnalyzeRequest(CamelModel):
         description="User or system that triggered the analysis.",
     )
 
-    @field_validator("curriculum_text")
-    @classmethod
-    def curriculum_text_not_blank(cls, v: str) -> str:
-        """Reject whitespace-only submissions."""
-        if not v.strip():
-            raise ValueError("curriculum_text must contain non-whitespace content.")
+    @model_validator(mode="after")
+    def at_least_one_source_provided(self):
+        """Ensure either curriculum_text or document_id is provided."""
+        has_curriculum = self.curriculum_text and self.curriculum_text.strip()
+        has_document = self.document_id
+
+        if not has_curriculum and not has_document:
+            raise ValueError(
+                "Either curriculum_text or document_id must be provided."
+            )
+
+        return self
+
         return v
 
 

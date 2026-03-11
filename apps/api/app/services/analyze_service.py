@@ -204,6 +204,10 @@ def _build_response(
                     break
 
     pillar_outs: list[PillarScoreOut] = []
+    # Build a lookup for pillar descriptions from the ontology
+    pillar_desc_map: dict[uuid.UUID, str | None] = {
+        p.id: p.description for p in ontology_version.pillars
+    }
     for pm in pillar_models:
         # Find the scoring result for pillar metadata
         pillar_code = None
@@ -220,6 +224,7 @@ def _build_response(
                 pillar_id=pm.pillar_id,
                 pillar_code=pillar_code,
                 pillar_name=pillar_name,
+                pillar_description=pillar_desc_map.get(pm.pillar_id),
                 score=pm.score,
                 skill_count=pm.skill_count,
                 explanation=pm.explanation,
@@ -297,6 +302,7 @@ def run_analysis(
         Active SQLAlchemy session (from ``Depends(get_db)``).
     request:
         Validated ``AnalyzeRequest`` from the router.
+        Must provide either ``curriculum_text`` or ``document_id``.
 
     Returns
     -------
@@ -326,12 +332,52 @@ def run_analysis(
             run_repo, request.ontology_version_id
         )
 
-        # ── Step 2: Persist document ─────────────────────────────────
-        _batch, doc = curriculum_repo.create_upload_batch_and_document(
-            school_id=request.school_id,
-            uploaded_by=request.triggered_by,
-            curriculum_text=request.curriculum_text,
-        )
+        # ── Step 2: Resolve curriculum text ──────────────────────────
+        # If document_id provided, load its extracted_text
+        curriculum_text = request.curriculum_text
+        doc = None
+
+        if request.document_id:
+            # Load document from database
+            import uuid as uuid_mod
+
+            try:
+                doc_uuid = uuid_mod.UUID(request.document_id)
+                doc = curriculum_repo.get_document(doc_uuid)
+            except (ValueError, AttributeError):
+                from fastapi import HTTPException
+
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid document_id format: {request.document_id}",
+                )
+
+            if not doc:
+                from fastapi import HTTPException
+
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Document not found: {request.document_id}",
+                )
+
+            # Extract text from document
+            if not doc.raw_text:
+                from fastapi import HTTPException
+
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Document {request.document_id} has no extracted text. "
+                    "Upload a supported file type (PDF, DOCX, TXT, etc.) or provide curriculum_text directly.",
+                )
+
+            curriculum_text = doc.raw_text
+        else:
+            # ── Step 2a: Persist document for curriculum_text submission
+            _batch, doc = curriculum_repo.create_upload_batch_and_document(
+                school_id=request.school_id,
+                uploaded_by=request.triggered_by,
+                curriculum_text=curriculum_text,
+            )
 
         # ── Step 3: Normalize ────────────────────────────────────────
         normalized: NormalizedItem = normalize(
@@ -340,7 +386,7 @@ def run_analysis(
             subject=request.subject,
             grade_band=request.grade_band,
             unit_name=request.unit_name,
-            lesson_text=request.curriculum_text,
+            lesson_text=curriculum_text,
             rubric_text=request.rubric_text,
         )
 
@@ -363,7 +409,7 @@ def run_analysis(
 
         # ── Step 6: Intake compliance ────────────────────────────────
         compliance_report = run_intake_checks(
-            lesson_text=request.curriculum_text,
+            lesson_text=curriculum_text,
             item=normalized,
             rubric_text=request.rubric_text,
         )
@@ -397,7 +443,7 @@ def run_analysis(
 
         # 8a: Try semantic matching first
         try:
-            embedding_provider = get_embedding_provider(settings)
+            embedding_provider = get_embedding_provider()
             vector_store = get_vector_store(db)
 
             semantic_result = run_semantic_matching(

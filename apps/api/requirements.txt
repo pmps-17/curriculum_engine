@@ -11,3 +11,5 @@ sentence-transformers
 httpx
 pytest
 pytest-asyncio
+pypdf
+python-docx

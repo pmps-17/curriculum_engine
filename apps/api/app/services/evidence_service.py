@@ -29,6 +29,7 @@ from app.services.scoring_service import (
     SECTION_TYPE_WEIGHTS,
     CandidateMatchInput,
     ScoringResult,
+    _ev,
 )
 
 logger = logging.getLogger(__name__)
@@ -244,7 +245,7 @@ def build_evidence(
 
     # Final sort: by pillar → skill → descending contribution
     all_snippets.sort(
-        key=lambda s: (s.pillar_code.value, s.skill_code, -s.contribution)
+        key=lambda s: (_ev(s.pillar_code), s.skill_code, -s.contribution)
     )
 
     logger.debug(

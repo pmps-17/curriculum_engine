@@ -72,3 +72,6 @@ Thumbs.db
 *.tmp
 tmp/
 apps/web/
+
+# Uploaded file storage (runtime artifact)
+apps/api/storage/

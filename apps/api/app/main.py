@@ -6,6 +6,7 @@ from app.routers.analyze import router as analyze_router
 from app.routers.health import router as health_router
 from app.routers.results import router as results_router
 from app.routers.review import router as review_router
+from app.routers.uploads import router as uploads_router
 
 app = FastAPI(
     title="Curriculum Engine API",
@@ -18,3 +19,4 @@ app.include_router(health_router)
 app.include_router(analyze_router)
 app.include_router(results_router)
 app.include_router(review_router)
+app.include_router(uploads_router)

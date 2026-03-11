@@ -68,10 +68,14 @@ class AnalysisRun(TimestampMixin, Base):
 # ── Candidate Match ──────────────────────────────────────────────────
 
 class CandidateMatch(TimestampMixin, Base):
-    """A potential match between a chunk and a skill indicator.
+    """A potential match between a chunk and a skill (or skill indicator).
 
     Generated during the retrieval phase (keyword or embedding).  Not
     every candidate survives scoring.
+
+    ``skill_id`` is always populated (the semantic unit of matching).
+    ``skill_indicator_id`` is populated only for keyword matches where
+    a specific indicator was matched.
     """
 
     __tablename__ = "candidate_matches"
@@ -85,8 +89,11 @@ class CandidateMatch(TimestampMixin, Base):
     chunk_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("chunks.id"), nullable=False
     )
-    skill_indicator_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("skill_indicators.id"), nullable=False
+    skill_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("skills.id", ondelete="CASCADE"), nullable=False
+    )
+    skill_indicator_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("skill_indicators.id"), nullable=True
     )
     match_method: Mapped[MatchMethod] = mapped_column(
         String(30), default=MatchMethod.KEYWORD, nullable=False
