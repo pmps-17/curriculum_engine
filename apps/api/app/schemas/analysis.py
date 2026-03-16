@@ -36,6 +36,12 @@ class EvidenceSnippetOut(CamelModel):
     id: UUID = Field(description="Evidence snippet identifier.")
     chunk_id: UUID = Field(description="Source chunk that contains the excerpt.")
     skill_id: UUID = Field(description="Skill this evidence supports.")
+    skill_code: str | None = Field(
+        default=None, description="Human-readable skill code (e.g. 'P1.S1')."
+    )
+    skill_name: str | None = Field(
+        default=None, description="Display name of the skill."
+    )
     snippet_text: str = Field(description="Verbatim text from the curriculum.")
     relevance_score: float = Field(
         ge=0.0, le=1.0,
@@ -215,6 +221,10 @@ class AnalyzeRequest(CamelModel):
         default=None,
         max_length=255,
         description="User or system that triggered the analysis.",
+    )
+    workspace_id: UUID | None = Field(
+        default=None,
+        description="Workspace to scope this analysis run to.",
     )
 
     @model_validator(mode="after")

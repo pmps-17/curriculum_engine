@@ -1,13 +1,14 @@
-"""Candidate matching service — keyword-based skill indicator matching.
+"""Candidate matching service — keyword-based skill indicator matching (FALLBACK).
 
 Compares chunk text against skill indicator keyword lists to produce
-candidate matches.  This is the **keyword fallback** strategy used
-alongside the embedding-based semantic matcher in
-``semantic_candidate_matching_service.py``.
+candidate matches.  This is the **keyword fallback** strategy, used
+ONLY when the embedding-based semantic matcher in
+``semantic_candidate_matching_service.py`` returns zero candidates.
 
-The orchestrator (``analyze_service``) runs both matchers and merges
-results via ``_merge_candidates()``, preferring semantic matches when
-available.
+The orchestrator (``analyze_service``) runs the semantic matcher first.
+If semantic yields candidates, keyword matching is skipped entirely.
+Keyword matching only runs as a last resort to avoid returning empty
+results.
 
 The service is **read-only with respect to the database** — it reads
 ontology data (pillars → skills → indicators) but writes nothing.
@@ -201,12 +202,12 @@ def run_keyword_matching(
                     indicator_id=ctx.indicator.id,
                     raw_score=raw_score,
                     match_method=MatchMethod.KEYWORD,
-                    matched_keywords=", ".join(matched_keywords),
+                    matched_keywords="[keyword_fallback] " + ", ".join(matched_keywords),
                 )
             )
 
-    logger.debug(
-        "Keyword matching: %d chunk(s) × %d indicator(s) → %d candidate(s).",
+    logger.info(
+        "Keyword fallback: %d chunk(s) x %d indicator(s) -> %d candidate(s).",
         len(chunk_models),
         len(indicators),
         len(candidates),

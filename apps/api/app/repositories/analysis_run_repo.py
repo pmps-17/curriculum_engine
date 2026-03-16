@@ -47,6 +47,7 @@ class AnalysisRunRepo:
         curriculum_item_id: uuid.UUID,
         ontology_version_id: uuid.UUID,
         triggered_by: str | None = None,
+        workspace_id: uuid.UUID | None = None,
     ) -> AnalysisRun:
         """Insert a new analysis run in ``RUNNING`` state."""
         run = AnalysisRun(
@@ -54,6 +55,7 @@ class AnalysisRunRepo:
             ontology_version_id=ontology_version_id,
             status=AnalysisRunStatus.RUNNING,
             triggered_by=triggered_by,
+            workspace_id=workspace_id,
         )
         self._db.add(run)
         self._db.flush()
@@ -77,3 +79,44 @@ class AnalysisRunRepo:
     def get_by_id(self, run_id: uuid.UUID) -> AnalysisRun | None:
         """Return an analysis run by primary key."""
         return self._db.get(AnalysisRun, run_id)
+
+    def list_for_workspace(
+        self,
+        workspace_id: uuid.UUID,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[dict]:
+        """Return lightweight run summaries for a workspace.
+
+        Joins through ``curriculum_items`` (title, document_id) and
+        optionally ``subjects`` (name) in a single query to avoid N+1.
+
+        Returns plain dicts — the router maps them into Pydantic models.
+        """
+        from app.models.curriculum import CurriculumItem, Subject
+
+        stmt = (
+            select(
+                AnalysisRun.id.label("analysis_run_id"),
+                CurriculumItem.title.label("title"),
+                Subject.name.label("subject"),
+                AnalysisRun.status,
+                AnalysisRun.created_at,
+                CurriculumItem.document_id.label("document_id"),
+            )
+            .join(
+                CurriculumItem,
+                CurriculumItem.id == AnalysisRun.curriculum_item_id,
+            )
+            .outerjoin(
+                Subject,
+                Subject.id == CurriculumItem.subject_id,
+            )
+            .where(AnalysisRun.workspace_id == workspace_id)
+            .order_by(AnalysisRun.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        rows = self._db.execute(stmt).mappings().all()
+        return [dict(r) for r in rows]

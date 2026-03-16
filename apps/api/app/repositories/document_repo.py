@@ -1,6 +1,7 @@
 """Document repository for managing document records."""
 
 import uuid
+from pathlib import Path
 from typing import Optional
 
 from sqlalchemy import select
@@ -9,8 +10,14 @@ from sqlalchemy.orm import Session
 from app.models.curriculum import Document, UploadBatch, School
 from app.models.enums import DocumentStatus, DocumentType, UploadBatchStatus
 
+# Must match upload_service.STORAGE_DIR
+_STORAGE_DIR = Path(__file__).parent.parent.parent / "storage"
 
-class DocumentRepository:
+# Default preview limit (characters)
+DEFAULT_PREVIEW_LIMIT = 2000
+
+
+class DocumentRepo:
     """Repository for document-related database operations."""
 
     def __init__(self, db: Session):
@@ -25,6 +32,8 @@ class DocumentRepository:
         document_type: str,
         extracted_text: Optional[str] = None,
         status: str = DocumentStatus.UPLOADED.value,
+        workspace_id: Optional[uuid.UUID] = None,
+        document_id: Optional[uuid.UUID] = None,
     ) -> Document:
         """
         Create a document record in the database.
@@ -37,11 +46,13 @@ class DocumentRepository:
             document_type: Document type (from DocumentType enum)
             extracted_text: Extracted text (optional)
             status: Document status (default: UPLOADED)
+            workspace_id: Workspace UUID for tenancy (optional)
+            document_id: Pre-assigned UUID (matches on-disk file name)
 
         Returns:
             Created Document model instance
         """
-        doc = Document(
+        kwargs: dict = dict(
             upload_batch_id=upload_batch_id,
             filename=filename,
             mime_type=mime_type,
@@ -49,7 +60,11 @@ class DocumentRepository:
             document_type=document_type,
             raw_text=extracted_text,
             status=status,
+            workspace_id=workspace_id,
         )
+        if document_id is not None:
+            kwargs["id"] = document_id
+        doc = Document(**kwargs)
         self.db.add(doc)
         self.db.flush()
         return doc
@@ -113,6 +128,8 @@ class DocumentRepository:
         extracted_text: Optional[str] = None,
         subject: Optional[str] = None,
         grade_band: Optional[str] = None,
+        workspace_id: Optional[uuid.UUID] = None,
+        document_id: Optional[uuid.UUID] = None,
     ) -> tuple[UploadBatch, Document]:
         """
         Create an upload batch and document in one transaction.
@@ -131,6 +148,8 @@ class DocumentRepository:
             extracted_text: Extracted text (optional)
             subject: Subject/topic (optional)
             grade_band: Grade band (optional)
+            workspace_id: Workspace UUID for tenancy (optional)
+            document_id: Pre-assigned UUID (matches on-disk filename)
 
         Returns:
             Tuple of (UploadBatch, Document)
@@ -168,6 +187,28 @@ class DocumentRepository:
             size_bytes=size_bytes,
             document_type=document_type,
             extracted_text=extracted_text,
+            workspace_id=workspace_id,
+            document_id=document_id,
         )
 
         return batch, doc
+
+    # ── New privacy / access-controlled helpers ──────────────────────
+
+    def get_document_preview(
+        self,
+        document_id: uuid.UUID,
+        limit: int = DEFAULT_PREVIEW_LIMIT,
+    ) -> tuple[str, bool] | None:
+        """Return (preview_text, truncated) or *None* if not found / not extracted."""
+        doc = self.get_document(document_id)
+        if doc is None or not doc.raw_text:
+            return None
+        text = doc.raw_text
+        truncated = len(text) > limit
+        return text[:limit], truncated
+
+    def get_file_path(self, document_id: uuid.UUID) -> Path | None:
+        """Return the on-disk path for the stored file, or *None*."""
+        path = _STORAGE_DIR / f"{document_id}.bin"
+        return path if path.is_file() else None

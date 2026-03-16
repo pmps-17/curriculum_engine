@@ -1,11 +1,11 @@
 """Generic base repository with common CRUD helpers.
 
-Every concrete repository inherits from ``BaseRepository[T]`` and gets
-``get_by_id``, ``list_all``, ``create``, ``create_many``, and
-``delete`` for free.  Specialised queries live in the concrete class.
-
-The base class is generic over ``T`` (the ORM model type) so that
-return types are correctly inferred by type-checkers and IDEs.
+.. warning::
+   **Not currently used.**  All concrete repos define their own
+   ``__init__(db)`` and query methods directly.  This class is
+   retained as a convenience base for future repositories that
+   want generic ``get_by_id`` / ``list_all`` / ``create`` / ``delete``
+   helpers.  Delete this file if it remains unused.
 """
 
 from __future__ import annotations

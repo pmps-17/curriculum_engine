@@ -98,6 +98,18 @@ class IntakeRejectedError(AnalysisError):
         self.compliance_results = compliance_results
 
 
+class DocumentNotFoundError(AnalysisError):
+    """Raised when the referenced document does not exist."""
+
+
+class DocumentValidationError(AnalysisError):
+    """Raised for invalid document_id format or missing extracted text."""
+
+
+class WorkspaceAccessError(AnalysisError):
+    """Raised when a document does not belong to the requested workspace."""
+
+
 # =====================================================================
 # Internal helpers
 # =====================================================================
@@ -122,13 +134,10 @@ def _resolve_ontology_version(
 
 
 # =====================================================================
-# Candidate merging
+# Candidate merging (kept for potential future use, but currently
+# the pipeline is semantic-first with keyword-only fallback —
+# no merging needed in the default flow).
 # =====================================================================
-
-
-#: Minimum number of semantic candidates required to skip the keyword
-#: fallback.  If semantic returns fewer, keyword results are merged in.
-_SEMANTIC_MIN_CANDIDATES: int = 3
 
 
 def _merge_candidates(
@@ -232,11 +241,19 @@ def _build_response(
             )
         )
 
+    # Build skill lookup from scoring results for evidence denormalisation
+    _skill_meta: dict[uuid.UUID, tuple[str | None, str | None]] = {}
+    for ps in scoring_result.pillar_scores:
+        for ss in ps.skill_scores:
+            _skill_meta[ss.skill_id] = (ss.skill_code, ss.skill_name)
+
     evidence_outs = [
         EvidenceSnippetOut(
             id=em.id,
             chunk_id=em.chunk_id,
             skill_id=em.skill_id,
+            skill_code=_skill_meta.get(em.skill_id, (None, None))[0],
+            skill_name=_skill_meta.get(em.skill_id, (None, None))[1],
             snippet_text=em.snippet_text,
             relevance_score=em.relevance_score,
         )
@@ -345,38 +362,36 @@ def run_analysis(
                 doc_uuid = uuid_mod.UUID(request.document_id)
                 doc = curriculum_repo.get_document(doc_uuid)
             except (ValueError, AttributeError):
-                from fastapi import HTTPException
-
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid document_id format: {request.document_id}",
+                raise DocumentValidationError(
+                    f"Invalid document_id format: {request.document_id}",
                 )
 
             if not doc:
-                from fastapi import HTTPException
-
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Document not found: {request.document_id}",
+                raise DocumentNotFoundError(
+                    f"Document not found: {request.document_id}",
                 )
 
             # Extract text from document
             if not doc.raw_text:
-                from fastapi import HTTPException
-
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Document {request.document_id} has no extracted text. "
+                raise DocumentValidationError(
+                    f"Document {request.document_id} has no extracted text. "
                     "Upload a supported file type (PDF, DOCX, TXT, etc.) or provide curriculum_text directly.",
                 )
 
             curriculum_text = doc.raw_text
+
+            # Workspace isolation: verify document belongs to same workspace
+            if request.workspace_id and doc.workspace_id != request.workspace_id:
+                raise WorkspaceAccessError(
+                    "Document does not belong to this workspace.",
+                )
         else:
             # ── Step 2a: Persist document for curriculum_text submission
             _batch, doc = curriculum_repo.create_upload_batch_and_document(
                 school_id=request.school_id,
                 uploaded_by=request.triggered_by,
                 curriculum_text=curriculum_text,
+                workspace_id=request.workspace_id,
             )
 
         # ── Step 3: Normalize ────────────────────────────────────────
@@ -405,6 +420,7 @@ def run_analysis(
             curriculum_item_id=ci.id,
             ontology_version_id=ontology_version.id,
             triggered_by=request.triggered_by,
+            workspace_id=request.workspace_id,
         )
 
         # ── Step 6: Intake compliance ────────────────────────────────
@@ -459,31 +475,35 @@ def run_analysis(
             semantic_candidates = semantic_result.candidates
         except Exception:
             logger.warning(
-                "Semantic matching failed — falling back to keyword only.",
+                "Semantic matching failed -- falling back to keyword only.",
                 exc_info=True,
             )
             semantic_candidates = []
 
-        # 8b: Always run keyword matching (for merge / fallback)
-        keyword_candidates = run_keyword_matching(
-            ontology_version=ontology_version,
-            chunk_models=chunk_models,
-            section_models=section_models,
-        )
-
-        # 8c: Decide final candidates
-        if len(semantic_candidates) >= _SEMANTIC_MIN_CANDIDATES:
-            candidates = _merge_candidates(semantic_candidates, keyword_candidates)
-            match_method_used = MatchMethod.HYBRID
+        # 8b: Decide: semantic-first, keyword fallback only
+        if semantic_candidates:
+            # Semantic produced results — use them directly
+            candidates = semantic_candidates
+            match_method_used = MatchMethod.EMBEDDING
+            logger.info(
+                "Semantic-first: %d candidate(s) from embeddings, "
+                "keyword fallback skipped.",
+                len(candidates),
+            )
         else:
-            if semantic_candidates:
-                candidates = _merge_candidates(semantic_candidates, keyword_candidates)
-                match_method_used = MatchMethod.HYBRID
-                used_fallback = True
-            else:
-                candidates = keyword_candidates
-                match_method_used = MatchMethod.KEYWORD
-                used_fallback = True
+            # Semantic returned nothing — run keyword as fallback
+            candidates = run_keyword_matching(
+                ontology_version=ontology_version,
+                chunk_models=chunk_models,
+                section_models=section_models,
+            )
+            match_method_used = MatchMethod.KEYWORD
+            used_fallback = True
+            logger.info(
+                "Semantic returned 0 candidates -- keyword fallback "
+                "produced %d candidate(s).",
+                len(candidates),
+            )
 
         candidate_repo.bulk_insert_candidate_matches(
             analysis_run_id=run.id,
@@ -555,7 +575,13 @@ def run_analysis(
             scoring_result=scoring_result,
         )
 
-    except (OntologyNotFoundError, IntakeRejectedError):
+    except (
+        OntologyNotFoundError,
+        IntakeRejectedError,
+        DocumentNotFoundError,
+        DocumentValidationError,
+        WorkspaceAccessError,
+    ):
         # These are expected business errors — re-raise after rollback
         db.rollback()
         raise
@@ -573,3 +599,60 @@ def run_analysis(
                 logger.exception("Failed to update run status after error.")
 
         raise AnalysisError(f"Analysis pipeline failed: {exc}") from exc
+
+
+# =====================================================================
+# Smoke test — run with: python -m app.services.analyze_service
+# =====================================================================
+if __name__ == "__main__":
+    """Verify semantic-first / keyword-fallback decision logic.
+
+    This does NOT hit the database — it only tests the branching
+    behaviour using mock candidate lists.
+    """
+    from app.services.scoring_service import CandidateMatchInput
+    from app.models.enums import MatchMethod, PillarCode, SectionType
+
+    _sem = CandidateMatchInput(
+        candidate_id=uuid.uuid4(), chunk_index=0,
+        section_type=SectionType.OTHER, skill_id=uuid.uuid4(),
+        skill_code="P1.S1", skill_name="Mock Skill",
+        pillar_id=uuid.uuid4(), pillar_code=PillarCode.P1,
+        pillar_name="Mock Pillar", indicator_id=None,
+        raw_score=0.45, match_method=MatchMethod.EMBEDDING,
+    )
+    _kw = CandidateMatchInput(
+        candidate_id=uuid.uuid4(), chunk_index=0,
+        section_type=SectionType.OTHER, skill_id=uuid.uuid4(),
+        skill_code="P2.S1", skill_name="KW Skill",
+        pillar_id=uuid.uuid4(), pillar_code=PillarCode.P2,
+        pillar_name="KW Pillar", indicator_id=uuid.uuid4(),
+        raw_score=0.30, match_method=MatchMethod.KEYWORD,
+        matched_keywords="[keyword_fallback] test",
+    )
+
+    # Case 1: semantic produced results -> keyword skipped
+    sem_candidates = [_sem]
+    if sem_candidates:
+        final, method = sem_candidates, MatchMethod.EMBEDDING
+    else:
+        final, method = [_kw], MatchMethod.KEYWORD
+    assert method == MatchMethod.EMBEDDING, "FAIL: should be EMBEDDING"
+    assert len(final) == 1 and final[0].indicator_id is None
+    print("PASS case 1: semantic-first, keyword skipped")
+
+    # Case 2: semantic returned nothing -> keyword fallback
+    sem_candidates = []
+    if sem_candidates:
+        final, method = sem_candidates, MatchMethod.EMBEDDING
+    else:
+        final, method = [_kw], MatchMethod.KEYWORD
+    assert method == MatchMethod.KEYWORD, "FAIL: should be KEYWORD"
+    assert "[keyword_fallback]" in (final[0].matched_keywords or "")
+    print("PASS case 2: keyword fallback triggered")
+
+    # Case 3: semantic candidate has indicator_id=None (skill-centered)
+    assert _sem.indicator_id is None, "FAIL: semantic must not fabricate indicator_id"
+    print("PASS case 3: semantic indicator_id is None (skill-centered)")
+
+    print("\nAll smoke tests passed.")

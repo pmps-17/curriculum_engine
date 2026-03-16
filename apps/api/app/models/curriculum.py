@@ -85,6 +85,9 @@ class Document(TimestampMixin, Base):
     upload_batch_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("upload_batches.id"), nullable=False
     )
+    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True
+    )
     filename: Mapped[str] = mapped_column(String(500), nullable=False)
     document_type: Mapped[DocumentType] = mapped_column(
         String(30), default=DocumentType.OTHER, nullable=False

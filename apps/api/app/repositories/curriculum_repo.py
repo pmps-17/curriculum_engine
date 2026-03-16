@@ -55,6 +55,7 @@ class CurriculumRepo:
         school_id: uuid.UUID | None,
         uploaded_by: str | None,
         curriculum_text: str,
+        workspace_id: uuid.UUID | None = None,
     ) -> tuple[UploadBatch, Document]:
         """Create a minimal upload batch + inline document.
 
@@ -90,6 +91,7 @@ class CurriculumRepo:
             document_type=DocumentType.LESSON_PLAN,
             status=DocumentStatus.PARSED,
             raw_text=curriculum_text,
+            workspace_id=workspace_id,
         )
         self._db.add(doc)
         self._db.flush()

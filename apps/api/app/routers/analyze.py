@@ -5,9 +5,10 @@ in ``analyze_service.run_analysis()``.  The router's only jobs are:
 
 1. Accept and validate the request body (Pydantic does this).
 2. Inject the DB session.
-3. Delegate to the service.
-4. Map service exceptions to HTTP status codes.
-5. Return the response.
+3. Validate workspace membership via ``get_current_user``.
+4. Delegate to the service.
+5. Map service exceptions to HTTP status codes.
+6. Return the response.
 """
 
 from __future__ import annotations
@@ -18,12 +19,17 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.auth import CurrentUser, get_current_user
 from app.core.db import get_db
+from app.repositories.workspace_repo import WorkspaceRepo
 from app.schemas.analysis import AnalyzeRequest, AnalyzeResponse
 from app.services.analyze_service import (
     AnalysisError,
+    DocumentNotFoundError,
+    DocumentValidationError,
     IntakeRejectedError,
     OntologyNotFoundError,
+    WorkspaceAccessError,
     run_analysis,
 )
 
@@ -44,6 +50,8 @@ router = APIRouter(prefix="/api/v1", tags=["Analysis"])
     ),
     responses={
         200: {"description": "Analysis completed successfully."},
+        401: {"description": "Not authenticated."},
+        403: {"description": "Not a member of the workspace."},
         404: {"description": "Ontology version not found."},
         422: {"description": "Request validation failed or intake rejected."},
         500: {"description": "Internal analysis pipeline error."},
@@ -52,9 +60,25 @@ router = APIRouter(prefix="/api/v1", tags=["Analysis"])
 def analyze(
     request: AnalyzeRequest,
     db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> AnalyzeResponse:
     """Run the full analysis pipeline for a single curriculum item."""
     request_id = uuid.uuid4()
+
+    # ── Workspace membership check (if workspace_id provided) ────────
+    if request.workspace_id:
+        ws_repo = WorkspaceRepo(db)
+        ws = ws_repo.get_by_id(request.workspace_id)
+        if ws is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Workspace not found.",
+            )
+        if not ws_repo.is_member(request.workspace_id, current_user.user_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not a member of this workspace.",
+            )
 
     # Structured log — never log raw curriculum/rubric text
     logger.info(
@@ -92,6 +116,27 @@ def analyze(
         logger.warning("Ontology not found.", extra={"request_id": str(request_id), "error": str(exc)})
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    except DocumentNotFoundError as exc:
+        logger.info("Document not found.", extra={"request_id": str(request_id), "error": str(exc)})
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    except DocumentValidationError as exc:
+        logger.info("Document validation failed.", extra={"request_id": str(request_id), "error": str(exc)})
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    except WorkspaceAccessError as exc:
+        logger.warning("Workspace access denied.", extra={"request_id": str(request_id), "error": str(exc)})
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=str(exc),
         ) from exc
 

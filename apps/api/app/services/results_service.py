@@ -135,6 +135,8 @@ def get_result(*, db: Session, analysis_run_id: UUID) -> ResultResponse:
             id=es.id,
             chunk_id=es.chunk_id,
             skill_id=es.skill_id,
+            skill_code=skill_map[es.skill_id].code if es.skill_id in skill_map else None,
+            skill_name=skill_map[es.skill_id].name if es.skill_id in skill_map else None,
             snippet_text=es.snippet_text,
             relevance_score=es.relevance_score,
         )

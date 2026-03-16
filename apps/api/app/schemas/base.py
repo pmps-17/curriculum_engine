@@ -14,8 +14,12 @@ from pydantic import BaseModel, ConfigDict, Field
 class CamelModel(BaseModel):
     """Base model for all API schemas.
 
-    ``from_attributes = True`` allows constructing a schema directly
-    from an ORM instance:  ``SchemaClass.model_validate(orm_obj)``.
+    Despite the name, this does **not** apply camelCase alias generation.
+    It provides shared config: ``from_attributes`` for ORM compatibility,
+    ``populate_by_name`` and ``str_strip_whitespace``.
+
+    TODO: rename to ``AppModel`` or add ``alias_generator = to_camel``
+    if camelCase JSON keys are desired.
     """
 
     model_config = ConfigDict(

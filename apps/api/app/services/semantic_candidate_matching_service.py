@@ -1,12 +1,13 @@
 """Semantic candidate matching service — embedding-based skill retrieval.
 
-Embeds curriculum chunks via the configured ``EmbeddingProvider``, then
-queries ``skill_embeddings`` via pgvector cosine distance to find the
-most relevant skills.
+This is the **primary** matching strategy.  It embeds curriculum chunks
+via the configured ``EmbeddingProvider``, then queries
+``skill_embeddings`` via pgvector cosine distance to find the most
+relevant skills.
 
 The output is a list of ``CandidateMatchInput`` objects — the **same**
-structure the scoring service consumes — so it is a drop-in complement
-(or replacement) for the keyword-based matcher.
+structure the scoring service consumes — so it is a drop-in replacement
+for the keyword-based matcher (which now serves as fallback only).
 
 Design notes
 ------------
@@ -15,6 +16,8 @@ Design notes
 - Skill embeddings are ensured via ``ontology_embedding_service`` before
   any similarity queries run.
 - Similarity is ``1 - cosine_distance`` clamped to ``[0, 1]``.
+- Candidates are **skill_id-centered**: ``indicator_id`` is always
+  ``None`` -- we match at the skill level, not the indicator level.
 """
 
 from __future__ import annotations
@@ -116,7 +119,7 @@ def run_semantic_matching(
     embedding_provider: EmbeddingProvider,
     vector_store: VectorStore,
     top_k: int = 5,
-    min_similarity: float = 0.25,
+    min_similarity: float = 0.22,
 ) -> SemanticMatchingResult:
     """Produce candidate matches using embedding similarity search.
 

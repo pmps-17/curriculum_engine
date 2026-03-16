@@ -28,6 +28,16 @@ class Settings(BaseSettings):
     APP_NAME: str = "curriculum-engine-api"
     APP_ENV: Literal["local", "dev", "staging", "production"] = "local"
 
+    # ── Auth ─────────────────────────────────────────────────────────
+    AUTH_MODE: Literal["google_jwt", "dev_header"] = "dev_header"
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_ISSUERS: list[str] = [
+        "accounts.google.com",
+        "https://accounts.google.com",
+    ]
+    GOOGLE_JWKS_URI: str = "https://www.googleapis.com/oauth2/v3/certs"
+    JWKS_CACHE_TTL_SECONDS: int = 3600  # 1 hour
+
     # ── Database ─────────────────────────────────────────────────────
     DATABASE_URL: str = "postgresql://appuser:apppass@localhost:5432/curriculum_engine"
 

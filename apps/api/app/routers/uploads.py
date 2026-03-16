@@ -6,31 +6,19 @@
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, File, Form, UploadFile, status, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status, HTTPException
+from sqlalchemy.orm import Session
 
-from app.core.db import SessionLocal
-from app.repositories.document_repo import DocumentRepository
+from app.core.auth import CurrentUser, get_current_user
+from app.core.db import get_db
+from app.repositories.document_repo import DEFAULT_PREVIEW_LIMIT, DocumentRepo
+from app.repositories.workspace_repo import WorkspaceRepo
+from app.schemas.documents import UploadResponse
 from app.services.upload_service import process_upload, UploadError
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["Uploads"])
-
-
-class UploadResponse(BaseModel):
-    """Response from file upload endpoint."""
-
-    document_id: str
-    filename: str
-    content_type: str
-    size_bytes: int
-    extraction_status: str  # "EXTRACTED" | "STORED_ONLY" | "REJECTED"
-    extracted_text: Optional[str] = None
-    warnings: Optional[list[str]] = None
-
-    class Config:
-        from_attributes = True
 
 
 @router.post(
@@ -45,6 +33,10 @@ async def upload_document(
     subject: Optional[str] = Form(None, description="Subject/topic"),
     grade_band: Optional[str] = Form(None, description="Grade level/band (e.g., 3-5)"),
     school_id: Optional[str] = Form(None, description="School UUID"),
+    workspace_id: Optional[str] = Form(None, description="Workspace UUID (required for tenancy)"),
+    include_preview: bool = Query(False, description="Include a truncated text preview in the response."),
+    current_user: CurrentUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> UploadResponse:
     """
     Upload a curriculum document file.
@@ -58,13 +50,15 @@ async def upload_document(
     **Returns:**
     - `document_id`: UUID of created document
     - `extraction_status`: Whether text was extracted ("EXTRACTED" | "STORED_ONLY" | "REJECTED")
-    - `extracted_text`: Text content if successfully extracted (optional)
     - `warnings`: Any extraction warnings (optional)
+    - `preview_text`: First 2 000 chars of extracted text (only when `?include_preview=true`)
 
     **Example:**
     ```
     curl -X POST http://localhost:8000/api/v1/uploads \\
+      -H "Authorization: Bearer <token>" \\
       -F "file=@curriculum.pdf" \\
+      -F "workspace_id=<UUID>" \\
       -F "title=Grade 5 Science" \\
       -F "subject=Science" \\
       -F "grade_band=3-5"
@@ -72,6 +66,23 @@ async def upload_document(
     """
     if not file:
         raise HTTPException(status_code=400, detail="File is required")
+
+    # ── Workspace membership check ───────────────────────────────────
+    import uuid
+
+    resolved_workspace_id: uuid.UUID | None = None
+    if workspace_id:
+        try:
+            resolved_workspace_id = uuid.UUID(workspace_id)
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=400, detail="Invalid workspace_id format.")
+
+        ws_repo = WorkspaceRepo(db)
+        ws = ws_repo.get_by_id(resolved_workspace_id)
+        if ws is None:
+            raise HTTPException(status_code=404, detail="Workspace not found.")
+        if not ws_repo.is_member(resolved_workspace_id, current_user.user_id):
+            raise HTTPException(status_code=403, detail="Not a member of this workspace.")
 
     # Read file content
     try:
@@ -95,24 +106,20 @@ async def upload_document(
         raise HTTPException(status_code=400, detail=str(e))
 
     # Create document record in database
-    db = SessionLocal()
     try:
-        doc_repo = DocumentRepository(db)
+        doc_repo = DocumentRepo(db)
 
         # Ensure school_id is a valid UUID; use a placeholder if not provided
-        import uuid
-
         if school_id:
             try:
                 school_uuid = uuid.UUID(school_id)
             except (ValueError, AttributeError):
                 school_uuid = uuid.uuid4()
         else:
-            # For POC: create a default school if needed
-            # In production, require school_id
             school_uuid = uuid.uuid4()
 
-        # Create batch and document
+        # Create batch and document (use service-generated ID so DB
+        # id matches the on-disk filename for downloads)
         batch, doc = doc_repo.create_upload_batch_and_document(
             school_id=school_uuid,
             filename=result.filename,
@@ -122,6 +129,8 @@ async def upload_document(
             extracted_text=result.extracted_text,
             subject=subject,
             grade_band=grade_band,
+            workspace_id=resolved_workspace_id,
+            document_id=result.document_id,
         )
 
         db.commit()
@@ -131,20 +140,28 @@ async def upload_document(
             f"extraction={result.extraction_status})"
         )
 
-        # Return response (do NOT include raw extracted_text in logs)
+        # Build response — never include full extracted text
+        preview_text: str | None = None
+        preview_truncated: bool | None = None
+        if include_preview and result.extracted_text:
+            full_len = len(result.extracted_text)
+            preview_text = result.extracted_text[:DEFAULT_PREVIEW_LIMIT]
+            preview_truncated = full_len > DEFAULT_PREVIEW_LIMIT
+
         return UploadResponse(
             document_id=str(doc.id),
             filename=result.filename,
             content_type=result.mime_type,
             size_bytes=result.size_bytes,
             extraction_status=result.extraction_status,
-            extracted_text=result.extracted_text,
             warnings=result.warnings if result.warnings else None,
+            preview_text=preview_text,
+            preview_truncated=preview_truncated,
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"[uploads] Database error: {e}")
         raise HTTPException(status_code=500, detail="Failed to create document record")
-    finally:
-        db.close()

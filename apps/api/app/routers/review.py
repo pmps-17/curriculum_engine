@@ -14,7 +14,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.auth import CurrentUser, get_current_user
 from app.core.db import get_db
+from app.repositories.workspace_repo import WorkspaceRepo
 from app.schemas.review import ReviewRequest, ReviewResponse
 from app.services.review_service import (
     AnalysisRunNotCompletedError,
@@ -49,6 +51,7 @@ router = APIRouter(prefix="/api/v1", tags=["Reviews"])
 def submit_review(
     request: ReviewRequest,
     db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> ReviewResponse:
     """Create a new review on an analysis run."""
     try:
@@ -97,6 +100,7 @@ def submit_review(
 def list_reviews(
     analysis_run_id: UUID,
     db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
 ) -> list[ReviewResponse]:
     """Return all reviews for a specific analysis run."""
     try:
