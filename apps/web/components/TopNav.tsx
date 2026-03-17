@@ -11,9 +11,8 @@ import { getOrgId, getOrgName } from "@/components/OrganizationGate";
 /* ------------------------------------------------------------------ */
 
 const NAV_ITEMS = [
-  { href: "/",             label: "Analyze" },
-  { href: "/compare",      label: "Compare" },
-  { href: "/organizations", label: "Organizations" },
+  { href: "/library",       label: "Library" },
+  { href: "/compare",       label: "Compare" },
 ] as const;
 
 /* ------------------------------------------------------------------ */
@@ -47,7 +46,7 @@ export default function TopNav() {
   }
 
   function isActive(href: string) {
-    if (href === "/") return pathname === "/";
+    if (href === "/library") return pathname === "/" || pathname.startsWith("/library");
     return pathname.startsWith(href);
   }
 
@@ -58,7 +57,7 @@ export default function TopNav() {
         <div className="flex items-center gap-1">
           {/* Logo */}
           <Link
-            href="/"
+            href="/library"
             className="mr-4 flex items-center gap-1.5 text-sm font-bold text-gray-900"
           >
             <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#4F46E5] text-[11px] font-black text-white">

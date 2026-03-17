@@ -62,7 +62,7 @@ export default function OrganizationsPage() {
   function selectOrg(org: { organization_id: string; name: string }) {
     setOrgId(org.organization_id);
     setOrgName(org.name);
-    router.push("/");
+    router.push("/library");
   }
 
   /* ── Created / Joined handlers ───────────────────────────────────── */

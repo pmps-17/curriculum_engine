@@ -150,10 +150,10 @@ export default function ResultsPage({
           {/* Contextual quick-links */}
           <div className="hidden items-center gap-2 sm:flex">
             <Link
-              href="/"
+              href="/library"
               className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[#4F46E5]/30 hover:text-[#4F46E5]"
             >
-              ← Analyze
+              ← Library
             </Link>
             <Link
               href="/compare"
