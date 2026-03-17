@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAnalysisRunsQuery } from "@/features/analysisRuns/hooks";
+import { useAnalysisRunsQuery, type AnalysisRunItem } from "@/features/analysisRuns/hooks";
+import { useAnalyzeMutation } from "@/features/analyze/hooks";
 import CurriculumSetRow from "@/components/CurriculumSetRow";
 import type { CurriculumSetItem } from "@/components/CurriculumSetRow";
 import AddCurriculumSetModal from "@/components/AddCurriculumSetModal";
+import EditDetailsModal from "@/components/EditDetailsModal";
 import ConfirmDeleteModal from "@/components/ConfirmDeleteModal";
 
 /* ------------------------------------------------------------------ */
@@ -15,6 +18,54 @@ import ConfirmDeleteModal from "@/components/ConfirmDeleteModal";
 function getOrgId(): string {
   if (typeof window === "undefined") return "";
   return localStorage.getItem("organization_id") ?? "";
+}
+
+/**
+ * Group analysis runs by document_id.
+ *
+ * Each unique document_id (or standalone run without a document)
+ * becomes one "Curriculum Set" row.  We keep the latest run's status
+ * and created_at, plus a run count.
+ */
+function groupByDocument(runs: AnalysisRunItem[]): CurriculumSetItem[] {
+  const map = new Map<
+    string,
+    { runs: AnalysisRunItem[]; document_id: string | null }
+  >();
+
+  for (const r of runs) {
+    // Key: document_id when present, else the run id itself
+    const key = r.document_id ?? r.analysis_run_id;
+    const entry = map.get(key);
+    if (entry) {
+      entry.runs.push(r);
+    } else {
+      map.set(key, { runs: [r], document_id: r.document_id ?? null });
+    }
+  }
+
+  const items: CurriculumSetItem[] = [];
+  for (const [key, { runs: groupRuns, document_id }] of map) {
+    // Runs are already sorted newest-first from the backend
+    const latest = groupRuns[0];
+    // Find the latest completed run (for "View Report")
+    const latestCompleted = groupRuns.find(
+      (r) => r.status.toLowerCase() === "completed" || r.status.toLowerCase() === "complete",
+    );
+    items.push({
+      id: key,
+      latest_run_id: latestCompleted?.analysis_run_id ?? latest.analysis_run_id,
+      run_count: groupRuns.length,
+      title: latest.title ?? "Untitled",
+      subject: latest.subject ?? "",
+      grade_band: latest.grade_band ?? "",
+      status: latest.status,
+      created_at: latest.created_at,
+      document_id,
+    });
+  }
+
+  return items;
 }
 
 /* ------------------------------------------------------------------ */
@@ -82,45 +133,98 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 
 export default function LibraryPage() {
   const orgId = getOrgId();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { data, isLoading, isError, error, refetch } = useAnalysisRunsQuery(orgId);
+  const analyzeMutation = useAnalyzeMutation();
 
   const [addOpen, setAddOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CurriculumSetItem | null>(null);
+  const [editTarget, setEditTarget] = useState<CurriculumSetItem | null>(null);
+  const [rerunningId, setRerunningId] = useState<string | null>(null);
 
-  /* ── Handlers ──────────────────────────────────────────────────── */
+  // Group raw analysis runs → one row per document
+  const items = useMemo(() => groupByDocument(data ?? []), [data]);
 
-  function handleRerun(_item: CurriculumSetItem) {
-    // TODO: call re-analyze endpoint once available on backend
-    // For now, open the modal pre-filled (or trigger analyze with same document_id)
-    alert("Re-run is not yet supported. Please add a new curriculum set instead.");
+  /* ── Re-run analysis using POST /api/v1/analyze ────────────────── */
+
+  function handleRerun(item: CurriculumSetItem) {
+    if (!item.document_id) {
+      // Text-only runs can't be re-run (no stored document)
+      alert("Re-run is only available for file-based curriculum sets.");
+      return;
+    }
+    setRerunningId(item.id);
+    analyzeMutation.mutate(
+      {
+        title: item.title,
+        subject: item.subject,
+        grade_band: item.grade_band,
+        document_id: item.document_id,
+      },
+      {
+        onSuccess: (resp) => {
+          setRerunningId(null);
+          queryClient.invalidateQueries({ queryKey: ["analysis-runs", orgId] });
+          router.push(`/results/${resp.analysis_run_id}`);
+        },
+        onError: () => {
+          setRerunningId(null);
+          alert("Re-run failed. Please try again.");
+        },
+      },
+    );
   }
+
+  /* ── Edit details (optimistic cache update) ────────────────────── */
+
+  function handleEditSave(updated: { title: string; subject: string; grade_band: string }) {
+    if (!editTarget) return;
+    // Optimistically update the query cache
+    // TODO: call PATCH /api/v1/documents/:id once available on backend
+    queryClient.setQueryData<AnalysisRunItem[]>(
+      ["analysis-runs", orgId],
+      (old) =>
+        (old ?? []).map((r) => {
+          const key = r.document_id ?? r.analysis_run_id;
+          if (key === editTarget.id) {
+            return {
+              ...r,
+              title: updated.title || r.title,
+              subject: updated.subject || r.subject,
+              grade_band: updated.grade_band || r.grade_band,
+            };
+          }
+          return r;
+        }),
+    );
+    setEditTarget(null);
+  }
+
+  /* ── Delete (optimistic cache removal) ─────────────────────────── */
 
   async function handleDeleteConfirm() {
     if (!deleteTarget) return;
-    // TODO: call DELETE /api/analysis-runs/:id once available on backend
-    // For now, just optimistically remove from UI cache
-    queryClient.setQueryData<CurriculumSetItem[]>(
+    // TODO: call DELETE /api/v1/documents/:id once available on backend
+    // For now, optimistically remove all runs belonging to this document
+    queryClient.setQueryData<AnalysisRunItem[]>(
       ["analysis-runs", orgId],
-      (old) => old?.filter((r) => r.analysis_run_id !== deleteTarget.analysis_run_id) ?? [],
+      (old) => {
+        if (!old) return [];
+        return old.filter((r) => {
+          const key = r.document_id ?? r.analysis_run_id;
+          return key !== deleteTarget.id;
+        });
+      },
     );
     setDeleteTarget(null);
   }
 
+  /* ── Add success ───────────────────────────────────────────────── */
+
   function handleAddSuccess() {
     queryClient.invalidateQueries({ queryKey: ["analysis-runs", orgId] });
   }
-
-  /* ── Coerce AnalysisRunItem → CurriculumSetItem ────────────────── */
-  const items: CurriculumSetItem[] = (data ?? []).map((r) => ({
-    analysis_run_id: r.analysis_run_id,
-    title: r.title ?? "Untitled",
-    subject: r.subject ?? "",
-    grade_band: r.grade_band ?? "",
-    status: r.status,
-    created_at: r.created_at,
-    document_id: r.document_id ?? null,
-  }));
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -170,6 +274,17 @@ export default function LibraryPage() {
           </div>
         )}
 
+        {/* Re-run spinner overlay */}
+        {rerunningId && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-[#4F46E5]/20 bg-[#4F46E5]/5 px-4 py-3 text-sm text-[#4F46E5]">
+            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Re-running analysis…
+          </div>
+        )}
+
         {/* Empty state */}
         {!isLoading && !isError && items.length === 0 && (
           <EmptyState onAdd={() => setAddOpen(true)} />
@@ -180,9 +295,10 @@ export default function LibraryPage() {
           <div className="space-y-3">
             {items.map((item) => (
               <CurriculumSetRow
-                key={item.analysis_run_id}
+                key={item.id}
                 item={item}
                 onRerun={handleRerun}
+                onEdit={setEditTarget}
                 onDelete={setDeleteTarget}
               />
             ))}
@@ -195,6 +311,18 @@ export default function LibraryPage() {
         open={addOpen}
         onClose={() => setAddOpen(false)}
         onSuccess={handleAddSuccess}
+      />
+
+      {/* ── Edit details modal ────────────────────────────────────── */}
+      <EditDetailsModal
+        open={!!editTarget}
+        initial={{
+          title: editTarget?.title ?? "",
+          subject: editTarget?.subject ?? "",
+          grade_band: editTarget?.grade_band ?? "",
+        }}
+        onSave={handleEditSave}
+        onClose={() => setEditTarget(null)}
       />
 
       {/* ── Delete confirmation ───────────────────────────────────── */}
