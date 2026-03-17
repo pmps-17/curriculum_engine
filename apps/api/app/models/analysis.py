@@ -41,8 +41,8 @@ class AnalysisRun(TimestampMixin, Base):
     ontology_version_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("ontology_versions.id"), nullable=False
     )
-    workspace_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=True
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True
     )
     status: Mapped[AnalysisRunStatus] = mapped_column(
         String(30), default=AnalysisRunStatus.PENDING, nullable=False

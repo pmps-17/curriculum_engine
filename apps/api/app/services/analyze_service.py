@@ -106,8 +106,8 @@ class DocumentValidationError(AnalysisError):
     """Raised for invalid document_id format or missing extracted text."""
 
 
-class WorkspaceAccessError(AnalysisError):
-    """Raised when a document does not belong to the requested workspace."""
+class OrganizationAccessError(AnalysisError):
+    """Raised when a document does not belong to the requested organization."""
 
 
 # =====================================================================
@@ -380,10 +380,10 @@ def run_analysis(
 
             curriculum_text = doc.raw_text
 
-            # Workspace isolation: verify document belongs to same workspace
-            if request.workspace_id and doc.workspace_id != request.workspace_id:
-                raise WorkspaceAccessError(
-                    "Document does not belong to this workspace.",
+            # Organization isolation: verify document belongs to same organization
+            if request.organization_id and doc.organization_id != request.organization_id:
+                raise OrganizationAccessError(
+                    "Document does not belong to this organization.",
                 )
         else:
             # ── Step 2a: Persist document for curriculum_text submission
@@ -391,7 +391,7 @@ def run_analysis(
                 school_id=request.school_id,
                 uploaded_by=request.triggered_by,
                 curriculum_text=curriculum_text,
-                workspace_id=request.workspace_id,
+                organization_id=request.organization_id,
             )
 
         # ── Step 3: Normalize ────────────────────────────────────────
@@ -420,7 +420,7 @@ def run_analysis(
             curriculum_item_id=ci.id,
             ontology_version_id=ontology_version.id,
             triggered_by=request.triggered_by,
-            workspace_id=request.workspace_id,
+            organization_id=request.organization_id,
         )
 
         # ── Step 6: Intake compliance ────────────────────────────────
@@ -580,7 +580,7 @@ def run_analysis(
         IntakeRejectedError,
         DocumentNotFoundError,
         DocumentValidationError,
-        WorkspaceAccessError,
+        OrganizationAccessError,
     ):
         # These are expected business errors — re-raise after rollback
         db.rollback()

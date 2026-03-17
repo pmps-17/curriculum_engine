@@ -48,11 +48,11 @@ from app.models.compliance import (  # noqa: F401
     RiskScore,
 )
 
-# ── Workspace / tenancy ──────────────────────────────────────────────
-from app.models.workspace import (  # noqa: F401
+# ── Organization / tenancy ────────────────────────────────────────────
+from app.models.organization import (  # noqa: F401
     User,
-    Workspace,
-    WorkspaceMember,
+    Organization,
+    OrganizationMember,
 )
 
 # ── Review / audit ───────────────────────────────────────────────────

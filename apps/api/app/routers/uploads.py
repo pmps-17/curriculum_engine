@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.auth import CurrentUser, get_current_user
 from app.core.db import get_db
 from app.repositories.document_repo import DEFAULT_PREVIEW_LIMIT, DocumentRepo
-from app.repositories.workspace_repo import WorkspaceRepo
+from app.repositories.organization_repo import OrganizationRepo
 from app.schemas.documents import UploadResponse
 from app.services.upload_service import process_upload, UploadError
 
@@ -33,7 +33,7 @@ async def upload_document(
     subject: Optional[str] = Form(None, description="Subject/topic"),
     grade_band: Optional[str] = Form(None, description="Grade level/band (e.g., 3-5)"),
     school_id: Optional[str] = Form(None, description="School UUID"),
-    workspace_id: Optional[str] = Form(None, description="Workspace UUID (required for tenancy)"),
+    organization_id: Optional[str] = Form(None, description="Organization UUID (required for tenancy)"),
     include_preview: bool = Query(False, description="Include a truncated text preview in the response."),
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -58,7 +58,7 @@ async def upload_document(
     curl -X POST http://localhost:8000/api/v1/uploads \\
       -H "Authorization: Bearer <token>" \\
       -F "file=@curriculum.pdf" \\
-      -F "workspace_id=<UUID>" \\
+      -F "organization_id=<UUID>" \\
       -F "title=Grade 5 Science" \\
       -F "subject=Science" \\
       -F "grade_band=3-5"
@@ -67,22 +67,22 @@ async def upload_document(
     if not file:
         raise HTTPException(status_code=400, detail="File is required")
 
-    # ── Workspace membership check ───────────────────────────────────
+    # ── Organization membership check ─────────────────────────────────
     import uuid
 
-    resolved_workspace_id: uuid.UUID | None = None
-    if workspace_id:
+    resolved_organization_id: uuid.UUID | None = None
+    if organization_id:
         try:
-            resolved_workspace_id = uuid.UUID(workspace_id)
+            resolved_organization_id = uuid.UUID(organization_id)
         except (ValueError, AttributeError):
-            raise HTTPException(status_code=400, detail="Invalid workspace_id format.")
+            raise HTTPException(status_code=400, detail="Invalid organization_id format.")
 
-        ws_repo = WorkspaceRepo(db)
-        ws = ws_repo.get_by_id(resolved_workspace_id)
-        if ws is None:
-            raise HTTPException(status_code=404, detail="Workspace not found.")
-        if not ws_repo.is_member(resolved_workspace_id, current_user.user_id):
-            raise HTTPException(status_code=403, detail="Not a member of this workspace.")
+        org_repo = OrganizationRepo(db)
+        org = org_repo.get_by_id(resolved_organization_id)
+        if org is None:
+            raise HTTPException(status_code=404, detail="Organization not found.")
+        if not org_repo.is_member(resolved_organization_id, current_user.user_id):
+            raise HTTPException(status_code=403, detail="Not a member of this organization.")
 
     # Read file content
     try:
@@ -129,7 +129,7 @@ async def upload_document(
             extracted_text=result.extracted_text,
             subject=subject,
             grade_band=grade_band,
-            workspace_id=resolved_workspace_id,
+            organization_id=resolved_organization_id,
             document_id=result.document_id,
         )
 

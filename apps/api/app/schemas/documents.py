@@ -54,7 +54,7 @@ class DocumentMeta(CamelModel):
     document_type: str
     extraction_status: str
     warnings: Optional[str] = None
-    workspace_id: Optional[UUID] = None
+    organization_id: Optional[UUID] = None
     created_at: datetime
 
 

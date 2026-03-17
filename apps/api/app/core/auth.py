@@ -26,7 +26,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.db import get_db
 from app.core.security import GoogleClaims, TokenVerificationError, verify_google_id_token
-from app.repositories.workspace_repo import WorkspaceRepo
+from app.repositories.organization_repo import OrganizationRepo
 
 logger = logging.getLogger(__name__)
 
@@ -121,9 +121,9 @@ def _resolve_google_jwt(request: Request, db: Session) -> CurrentUser:
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
-    # Upsert user by email (same as existing workspace_repo logic)
-    ws_repo = WorkspaceRepo(db)
-    user = ws_repo.upsert_user(claims.email.strip().lower())
+    # Upsert user by email (same as existing organization_repo logic)
+    org_repo = OrganizationRepo(db)
+    user = org_repo.upsert_user(claims.email.strip().lower())
 
     # Update name if provided and not yet set
     if claims.name and not user.name:
@@ -157,8 +157,8 @@ def _resolve_dev_header(request: Request, db: Session) -> CurrentUser:
         )
 
     email = email.strip().lower()
-    ws_repo = WorkspaceRepo(db)
-    user = ws_repo.upsert_user(email)
+    org_repo = OrganizationRepo(db)
+    user = org_repo.upsert_user(email)
 
     return CurrentUser(
         user_id=user.id,

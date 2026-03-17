@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.db import get_db
-from app.repositories.workspace_repo import WorkspaceRepo
+from app.repositories.organization_repo import OrganizationRepo
 from app.schemas.review import ReviewRequest, ReviewResponse
 from app.services.review_service import (
     AnalysisRunNotCompletedError,

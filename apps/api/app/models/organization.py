@@ -1,10 +1,10 @@
-"""Workspace-domain models.
+"""Organization-domain models.
 
-Implements multi-tenant workspace isolation with invite-code joins:
-users → workspaces → workspace_members.
+Implements multi-tenant organization isolation with invite-code joins:
+users → organizations → organization_members.
 
-Documents and analysis runs carry a ``workspace_id`` FK so that all
-user data is scoped to the workspace the user is operating in.
+Documents and analysis runs carry an ``organization_id`` FK so that all
+user data is scoped to the organization the user is operating in.
 """
 
 from __future__ import annotations
@@ -38,20 +38,20 @@ class User(TimestampMixin, Base):
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # relationships
-    owned_workspaces: Mapped[list["Workspace"]] = relationship(
+    owned_organizations: Mapped[list["Organization"]] = relationship(
         back_populates="owner", cascade="all, delete-orphan"
     )
-    memberships: Mapped[list["WorkspaceMember"]] = relationship(
+    memberships: Mapped[list["OrganizationMember"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
 
-# ── Workspace ────────────────────────────────────────────────────────
+# ── Organization ─────────────────────────────────────────────────────
 
-class Workspace(TimestampMixin, Base):
-    """A tenant workspace — all documents & runs are scoped here."""
+class Organization(TimestampMixin, Base):
+    """A tenant organization — all documents & runs are scoped here."""
 
-    __tablename__ = "workspaces"
+    __tablename__ = "organizations"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -65,36 +65,36 @@ class Workspace(TimestampMixin, Base):
     )
 
     # relationships
-    owner: Mapped["User"] = relationship(back_populates="owned_workspaces")
-    members: Mapped[list["WorkspaceMember"]] = relationship(
-        back_populates="workspace", cascade="all, delete-orphan"
+    owner: Mapped["User"] = relationship(back_populates="owned_organizations")
+    members: Mapped[list["OrganizationMember"]] = relationship(
+        back_populates="organization", cascade="all, delete-orphan"
     )
 
 
-# ── Workspace Member ────────────────────────────────────────────────
+# ── Organization Member ─────────────────────────────────────────────
 
-class WorkspaceMember(TimestampMixin, Base):
-    """Join table: which users belong to which workspaces.
+class OrganizationMember(TimestampMixin, Base):
+    """Join table: which users belong to which organizations.
 
     No ``role`` column yet — can be added later without schema breakage.
     """
 
-    __tablename__ = "workspace_members"
+    __tablename__ = "organization_members"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("workspaces.id"), nullable=False
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
 
     __table_args__ = (
-        UniqueConstraint("workspace_id", "user_id", name="uq_workspace_members_ws_user"),
+        UniqueConstraint("organization_id", "user_id", name="uq_organization_members_org_user"),
     )
 
     # relationships
-    workspace: Mapped["Workspace"] = relationship(back_populates="members")
+    organization: Mapped["Organization"] = relationship(back_populates="members")
     user: Mapped["User"] = relationship(back_populates="memberships")

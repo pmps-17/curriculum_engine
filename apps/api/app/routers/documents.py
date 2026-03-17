@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from app.core.auth import CurrentUser, get_current_user
 from app.core.db import get_db
 from app.repositories.document_repo import DEFAULT_PREVIEW_LIMIT, DocumentRepo
-from app.repositories.workspace_repo import WorkspaceRepo
+from app.repositories.organization_repo import OrganizationRepo
 from app.schemas.documents import DocumentMeta, DocumentPreview
 
 logger = logging.getLogger(__name__)
@@ -42,17 +42,17 @@ def _require_document(doc_repo: DocumentRepo, document_id: UUID):
 
 def _enforce_membership(
     db: Session,
-    workspace_id: UUID | None,
+    organization_id: UUID | None,
     user_id: UUID,
 ) -> None:
-    """Raise 403 when the document belongs to a workspace the user is not a member of."""
-    if workspace_id is None:
-        return  # no workspace — no restriction
-    ws_repo = WorkspaceRepo(db)
-    if not ws_repo.is_member(workspace_id, user_id):
+    """Raise 403 when the document belongs to an organization the user is not a member of."""
+    if organization_id is None:
+        return  # no organization — no restriction
+    org_repo = OrganizationRepo(db)
+    if not org_repo.is_member(organization_id, user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not a member of this workspace.",
+            detail="Not a member of this organization.",
         )
 
 
@@ -75,7 +75,7 @@ def _extraction_status_label(doc) -> str:
     summary="Document metadata",
     responses={
         401: {"description": "Not authenticated."},
-        403: {"description": "Not a member of the workspace."},
+        403: {"description": "Not a member of the organization."},
         404: {"description": "Document not found."},
     },
 )
@@ -87,7 +87,7 @@ def get_document_meta(
     """Return document metadata without any extracted text."""
     doc_repo = DocumentRepo(db)
     doc = _require_document(doc_repo, document_id)
-    _enforce_membership(db, doc.workspace_id, current_user.user_id)
+    _enforce_membership(db, doc.organization_id, current_user.user_id)
 
     return DocumentMeta(
         document_id=doc.id,
@@ -97,7 +97,7 @@ def get_document_meta(
         document_type=doc.document_type if isinstance(doc.document_type, str) else doc.document_type.value,
         extraction_status=_extraction_status_label(doc),
         warnings=doc.parse_error,
-        workspace_id=doc.workspace_id,
+        organization_id=doc.organization_id,
         created_at=doc.created_at,
     )
 
@@ -112,7 +112,7 @@ def get_document_meta(
     summary="Truncated text preview",
     responses={
         401: {"description": "Not authenticated."},
-        403: {"description": "Not a member of the workspace."},
+        403: {"description": "Not a member of the organization."},
         404: {"description": "Document not found."},
         409: {"description": "Text not extracted for this document."},
     },
@@ -125,7 +125,7 @@ def get_document_preview(
     """Return the first *N* characters of extracted text."""
     doc_repo = DocumentRepo(db)
     doc = _require_document(doc_repo, document_id)
-    _enforce_membership(db, doc.workspace_id, current_user.user_id)
+    _enforce_membership(db, doc.organization_id, current_user.user_id)
 
     result = doc_repo.get_document_preview(document_id, limit=DEFAULT_PREVIEW_LIMIT)
     if result is None:
@@ -152,7 +152,7 @@ def get_document_preview(
     summary="Download original file",
     responses={
         401: {"description": "Not authenticated."},
-        403: {"description": "Not a member of the workspace."},
+        403: {"description": "Not a member of the organization."},
         404: {"description": "Document or file not found."},
     },
 )
@@ -164,7 +164,7 @@ def download_document(
     """Stream the original uploaded file as an attachment."""
     doc_repo = DocumentRepo(db)
     doc = _require_document(doc_repo, document_id)
-    _enforce_membership(db, doc.workspace_id, current_user.user_id)
+    _enforce_membership(db, doc.organization_id, current_user.user_id)
 
     file_path = doc_repo.get_file_path(document_id)
     if file_path is None:

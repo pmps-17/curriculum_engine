@@ -33,10 +33,10 @@ from app.schemas.results import (  # noqa: F401
 # ── Base ─────────────────────────────────────────────────────────────
 from app.schemas.base import CamelModel  # noqa: F401
 
-# ── Workspaces ───────────────────────────────────────────────────────
-from app.schemas.workspaces import (  # noqa: F401
-    WorkspaceCreateRequest,
-    WorkspaceJoinOut,
-    WorkspaceJoinRequest,
-    WorkspaceOut,
+# ── Organizations ─────────────────────────────────────────────────────
+from app.schemas.organizations import (  # noqa: F401
+    OrganizationCreateRequest,
+    OrganizationJoinOut,
+    OrganizationJoinRequest,
+    OrganizationOut,
 )

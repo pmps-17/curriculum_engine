@@ -32,7 +32,7 @@ class DocumentRepo:
         document_type: str,
         extracted_text: Optional[str] = None,
         status: str = DocumentStatus.UPLOADED.value,
-        workspace_id: Optional[uuid.UUID] = None,
+        organization_id: Optional[uuid.UUID] = None,
         document_id: Optional[uuid.UUID] = None,
     ) -> Document:
         """
@@ -46,7 +46,7 @@ class DocumentRepo:
             document_type: Document type (from DocumentType enum)
             extracted_text: Extracted text (optional)
             status: Document status (default: UPLOADED)
-            workspace_id: Workspace UUID for tenancy (optional)
+            organization_id: Organization UUID for tenancy (optional)
             document_id: Pre-assigned UUID (matches on-disk file name)
 
         Returns:
@@ -60,7 +60,7 @@ class DocumentRepo:
             document_type=document_type,
             raw_text=extracted_text,
             status=status,
-            workspace_id=workspace_id,
+            organization_id=organization_id,
         )
         if document_id is not None:
             kwargs["id"] = document_id
@@ -128,7 +128,7 @@ class DocumentRepo:
         extracted_text: Optional[str] = None,
         subject: Optional[str] = None,
         grade_band: Optional[str] = None,
-        workspace_id: Optional[uuid.UUID] = None,
+        organization_id: Optional[uuid.UUID] = None,
         document_id: Optional[uuid.UUID] = None,
     ) -> tuple[UploadBatch, Document]:
         """
@@ -148,7 +148,7 @@ class DocumentRepo:
             extracted_text: Extracted text (optional)
             subject: Subject/topic (optional)
             grade_band: Grade band (optional)
-            workspace_id: Workspace UUID for tenancy (optional)
+            organization_id: Organization UUID for tenancy (optional)
             document_id: Pre-assigned UUID (matches on-disk filename)
 
         Returns:
@@ -187,7 +187,7 @@ class DocumentRepo:
             size_bytes=size_bytes,
             document_type=document_type,
             extracted_text=extracted_text,
-            workspace_id=workspace_id,
+            organization_id=organization_id,
             document_id=document_id,
         )
 

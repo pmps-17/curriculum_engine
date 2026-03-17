@@ -1,7 +1,7 @@
 """Response schemas for the analysis-runs listing endpoint.
 
 Provides a lightweight ``AnalysisRunSummary`` — just enough for the
-Compare selector and workspace dashboards without the full result
+Compare selector and organization dashboards without the full result
 payload.
 """
 

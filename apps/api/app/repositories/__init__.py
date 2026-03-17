@@ -19,4 +19,4 @@ from app.repositories.embedding_repo import EmbeddingRepo  # noqa: F401
 from app.repositories.results_repo import ResultsRepo  # noqa: F401
 from app.repositories.review_repo import ReviewRepo  # noqa: F401
 from app.repositories.scoring_repo import ScoringRepo  # noqa: F401
-from app.repositories.workspace_repo import WorkspaceRepo  # noqa: F401
+from app.repositories.organization_repo import OrganizationRepo  # noqa: F401

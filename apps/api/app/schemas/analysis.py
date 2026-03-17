@@ -222,9 +222,9 @@ class AnalyzeRequest(CamelModel):
         max_length=255,
         description="User or system that triggered the analysis.",
     )
-    workspace_id: UUID | None = Field(
+    organization_id: UUID | None = Field(
         default=None,
-        description="Workspace to scope this analysis run to.",
+        description="Organization to scope this analysis run to.",
     )
 
     @model_validator(mode="after")

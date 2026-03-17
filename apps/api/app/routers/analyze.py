@@ -5,7 +5,7 @@ in ``analyze_service.run_analysis()``.  The router's only jobs are:
 
 1. Accept and validate the request body (Pydantic does this).
 2. Inject the DB session.
-3. Validate workspace membership via ``get_current_user``.
+3. Validate organization membership via ``get_current_user``.
 4. Delegate to the service.
 5. Map service exceptions to HTTP status codes.
 6. Return the response.
@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.db import get_db
-from app.repositories.workspace_repo import WorkspaceRepo
+from app.repositories.organization_repo import OrganizationRepo
 from app.schemas.analysis import AnalyzeRequest, AnalyzeResponse
 from app.services.analyze_service import (
     AnalysisError,
@@ -29,7 +29,7 @@ from app.services.analyze_service import (
     DocumentValidationError,
     IntakeRejectedError,
     OntologyNotFoundError,
-    WorkspaceAccessError,
+    OrganizationAccessError,
     run_analysis,
 )
 
@@ -51,7 +51,7 @@ router = APIRouter(prefix="/api/v1", tags=["Analysis"])
     responses={
         200: {"description": "Analysis completed successfully."},
         401: {"description": "Not authenticated."},
-        403: {"description": "Not a member of the workspace."},
+        403: {"description": "Not a member of the organization."},
         404: {"description": "Ontology version not found."},
         422: {"description": "Request validation failed or intake rejected."},
         500: {"description": "Internal analysis pipeline error."},
@@ -65,19 +65,19 @@ def analyze(
     """Run the full analysis pipeline for a single curriculum item."""
     request_id = uuid.uuid4()
 
-    # ── Workspace membership check (if workspace_id provided) ────────
-    if request.workspace_id:
-        ws_repo = WorkspaceRepo(db)
-        ws = ws_repo.get_by_id(request.workspace_id)
-        if ws is None:
+    # ── Organization membership check (if organization_id provided) ────
+    if request.organization_id:
+        org_repo = OrganizationRepo(db)
+        org = org_repo.get_by_id(request.organization_id)
+        if org is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Workspace not found.",
+                detail="Organization not found.",
             )
-        if not ws_repo.is_member(request.workspace_id, current_user.user_id):
+        if not org_repo.is_member(request.organization_id, current_user.user_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not a member of this workspace.",
+                detail="Not a member of this organization.",
             )
 
     # Structured log — never log raw curriculum/rubric text
@@ -133,8 +133,8 @@ def analyze(
             detail=str(exc),
         ) from exc
 
-    except WorkspaceAccessError as exc:
-        logger.warning("Workspace access denied.", extra={"request_id": str(request_id), "error": str(exc)})
+    except OrganizationAccessError as exc:
+        logger.warning("Organization access denied.", extra={"request_id": str(request_id), "error": str(exc)})
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(exc),

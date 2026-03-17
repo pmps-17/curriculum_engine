@@ -47,7 +47,7 @@ class AnalysisRunRepo:
         curriculum_item_id: uuid.UUID,
         ontology_version_id: uuid.UUID,
         triggered_by: str | None = None,
-        workspace_id: uuid.UUID | None = None,
+        organization_id: uuid.UUID | None = None,
     ) -> AnalysisRun:
         """Insert a new analysis run in ``RUNNING`` state."""
         run = AnalysisRun(
@@ -55,7 +55,7 @@ class AnalysisRunRepo:
             ontology_version_id=ontology_version_id,
             status=AnalysisRunStatus.RUNNING,
             triggered_by=triggered_by,
-            workspace_id=workspace_id,
+            organization_id=organization_id,
         )
         self._db.add(run)
         self._db.flush()
@@ -80,14 +80,14 @@ class AnalysisRunRepo:
         """Return an analysis run by primary key."""
         return self._db.get(AnalysisRun, run_id)
 
-    def list_for_workspace(
+    def list_for_organization(
         self,
-        workspace_id: uuid.UUID,
+        organization_id: uuid.UUID,
         *,
         limit: int = 50,
         offset: int = 0,
     ) -> list[dict]:
-        """Return lightweight run summaries for a workspace.
+        """Return lightweight run summaries for an organization.
 
         Joins through ``curriculum_items`` (title, document_id) and
         optionally ``subjects`` (name) in a single query to avoid N+1.
@@ -113,7 +113,7 @@ class AnalysisRunRepo:
                 Subject,
                 Subject.id == CurriculumItem.subject_id,
             )
-            .where(AnalysisRun.workspace_id == workspace_id)
+            .where(AnalysisRun.organization_id == organization_id)
             .order_by(AnalysisRun.created_at.desc())
             .limit(limit)
             .offset(offset)
