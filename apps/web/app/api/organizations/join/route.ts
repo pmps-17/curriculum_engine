@@ -3,7 +3,7 @@ import { API_BASE_URL } from "@/lib/config";
 import { getSessionEmail, getBackendAuthHeaders } from "@/lib/auth";
 
 /**
- * POST /api/workspaces/join → backend POST /api/v1/workspaces/join
+ * POST /api/organizations/join → backend POST /api/v1/organizations/join
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const email = await getSessionEmail();
@@ -18,7 +18,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
   }
 
-  const backendUrl = `${API_BASE_URL}/api/v1/workspaces/join`;
+  const backendUrl = `${API_BASE_URL}/api/v1/organizations/join`;
   const authHeaders = await getBackendAuthHeaders();
 
   let upstream: Response;
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       signal: AbortSignal.timeout(10_000),
     });
   } catch (err) {
-    console.error("[workspaces/join] Backend unreachable:", err);
+    console.error("[organizations/join] Backend unreachable:", err);
     return NextResponse.json({ error: "BACKEND_UNREACHABLE" }, { status: 502 });
   }
 

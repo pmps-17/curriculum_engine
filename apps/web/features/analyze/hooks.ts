@@ -18,13 +18,13 @@ export interface AnalyzeResponse {
 export function useAnalyzeMutation() {
   return useMutation<AnalyzeResponse, Error, AnalyzeRequest>({
     mutationFn: (data) => {
-      // Inject workspace_id from localStorage (POC tenancy)
-      const wsId =
+      // Inject organization_id from localStorage (POC tenancy)
+      const orgId =
         typeof window !== "undefined"
-          ? localStorage.getItem("workspace_id") ?? undefined
+          ? localStorage.getItem("organization_id") ?? undefined
           : undefined;
 
-      const payload = { ...data, ...(wsId ? { workspace_id: wsId } : {}) };
+      const payload = { ...data, ...(orgId ? { organization_id: orgId } : {}) };
 
       return apiFetch<AnalyzeResponse, typeof payload>(proxyPaths.analyze, {
         method: "POST",

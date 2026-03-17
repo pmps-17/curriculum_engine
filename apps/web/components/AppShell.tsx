@@ -1,11 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import WorkspaceGate from "@/components/WorkspaceGate";
-import WorkspaceHeader from "@/components/WorkspaceHeader";
+import OrganizationGate from "@/components/OrganizationGate";
+import OrganizationHeader from "@/components/OrganizationHeader";
 
 /**
- * Wraps all page content. Shows the nav bar + workspace gate on
+ * Wraps all page content. Shows the nav bar + organization gate on
  * authenticated routes, and renders children directly on public
  * routes like /login.
  */
@@ -29,11 +29,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             Compare
           </a>
         </div>
-        <WorkspaceHeader />
+        <OrganizationHeader />
       </nav>
-      <WorkspaceGate>
+      <OrganizationGate>
         {children}
-      </WorkspaceGate>
+      </OrganizationGate>
     </>
   );
 }

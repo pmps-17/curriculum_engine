@@ -155,9 +155,9 @@ export default function AnalyzeForm() {
           subject: form.subject || "",
           grade_band: form.grade_band || "",
           created_at: new Date().toISOString(),
-          workspace_id:
+          organization_id:
             typeof window !== "undefined"
-              ? localStorage.getItem("workspace_id") ?? undefined
+              ? localStorage.getItem("organization_id") ?? undefined
               : undefined,
         });
       },

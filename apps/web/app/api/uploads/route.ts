@@ -95,9 +95,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       backendFormData.append("school_id", school_id);
     }
 
-    const workspace_id = formData.get("workspace_id");
-    if (workspace_id && typeof workspace_id === "string" && workspace_id.trim()) {
-      backendFormData.append("workspace_id", workspace_id);
+    const organization_id = formData.get("organization_id");
+    if (organization_id && typeof organization_id === "string" && organization_id.trim()) {
+      backendFormData.append("organization_id", organization_id);
     }
 
     // 5. Forward to backend

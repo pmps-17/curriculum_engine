@@ -14,10 +14,10 @@ import type { AnalysisResults } from "@/features/results/hooks";
 /* ------------------------------------------------------------------ */
 
 export default function ComparePage() {
-  /* ---- workspace id from localStorage ---------------------------- */
-  const wsId =
+  /* ---- organization id from localStorage ----------------------- */
+  const orgId =
     typeof window !== "undefined"
-      ? localStorage.getItem("workspace_id") ?? ""
+      ? localStorage.getItem("organization_id") ?? ""
       : "";
 
   /* ---- server-backed analysis run list --------------------------- */
@@ -25,7 +25,7 @@ export default function ComparePage() {
     data: runs,
     isLoading: runsLoading,
     error: runsError,
-  } = useAnalysisRunsQuery(wsId);
+  } = useAnalysisRunsQuery(orgId);
 
   /** Map backend items to the shape CompareSelector / CompareGrid expect. */
   const analyses = useMemo(
@@ -36,9 +36,9 @@ export default function ComparePage() {
         subject: r.subject ?? "",
         grade_band: r.grade_band ?? "",
         created_at: r.created_at,
-        workspace_id: wsId,
+        organization_id: orgId,
       })),
-    [runs, wsId],
+    [runs, orgId],
   );
 
   /* ---- selection state ------------------------------------------- */
@@ -94,7 +94,7 @@ export default function ComparePage() {
         Compare Coverage
       </h1>
       <p className="mb-8 text-sm text-gray-500">
-        Select 2–5 analyses from this workspace to compare pillar scores
+        Select 2–5 analyses from this organization to compare pillar scores
         side-by-side.
       </p>
 

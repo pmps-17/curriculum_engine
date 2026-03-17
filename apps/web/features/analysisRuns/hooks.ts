@@ -21,22 +21,22 @@ export interface AnalysisRunItem {
 /* ------------------------------------------------------------------ */
 
 /**
- * Fetch the list of analysis runs for a workspace.
+ * Fetch the list of analysis runs for an organization.
  *
- * Calls `GET /api/analysis-runs?workspace_id=...&limit=50`
+ * Calls `GET /api/analysis-runs?organization_id=...&limit=50`
  * (Next.js proxy → FastAPI backend).
  *
  * X-User-Email is automatically injected by `apiFetch`.
  */
-export function useAnalysisRunsQuery(workspaceId: string) {
+export function useAnalysisRunsQuery(organizationId: string) {
   return useQuery<AnalysisRunItem[], Error>({
-    queryKey: ["analysis-runs", workspaceId],
+    queryKey: ["analysis-runs", organizationId],
     queryFn: () =>
       apiFetch<AnalysisRunItem[]>(
-        `/api/analysis-runs?workspace_id=${encodeURIComponent(workspaceId)}&limit=50`,
+        `/api/analysis-runs?organization_id=${encodeURIComponent(organizationId)}&limit=50`,
         { method: "GET" },
       ),
-    enabled: !!workspaceId,
+    enabled: !!organizationId,
     staleTime: 30_000,
     retry: 1,
   });

@@ -8,39 +8,39 @@ import { usePathname } from "next/navigation";
 /*  Types                                                             */
 /* ------------------------------------------------------------------ */
 
-interface Workspace {
-  workspace_id: string;
+interface Organization {
+  organization_id: string;
   name: string;
   invite_code?: string | null;
   created_at?: string;
 }
 
 /* ------------------------------------------------------------------ */
-/*  localStorage helpers (workspace only — email comes from session)  */
+/*  localStorage helpers (org only — email comes from session)        */
 /* ------------------------------------------------------------------ */
 
-function getWsId(): string {
+function getOrgId(): string {
   if (typeof window === "undefined") return "";
-  return localStorage.getItem("workspace_id") ?? "";
+  return localStorage.getItem("organization_id") ?? "";
 }
-function setWsId(v: string) {
-  localStorage.setItem("workspace_id", v);
+function setOrgId(v: string) {
+  localStorage.setItem("organization_id", v);
 }
-function getWsName(): string {
+function getOrgName(): string {
   if (typeof window === "undefined") return "";
-  return localStorage.getItem("workspace_name") ?? "";
+  return localStorage.getItem("organization_name") ?? "";
 }
-function setWsName(v: string) {
-  localStorage.setItem("workspace_name", v);
+function setOrgName(v: string) {
+  localStorage.setItem("organization_name", v);
 }
 
-export { getWsId, getWsName, setWsId, setWsName };
+export { getOrgId, getOrgName, setOrgId, setOrgName };
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                         */
 /* ------------------------------------------------------------------ */
 
-export default function WorkspaceGate({
+export default function OrganizationGate({
   children,
 }: {
   children: React.ReactNode;
@@ -48,16 +48,16 @@ export default function WorkspaceGate({
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const [ready, setReady] = useState(false);
-  const [wsId, setWsIdState] = useState("");
+  const [orgId, setOrgIdState] = useState("");
 
-  // Hydrate workspace from localStorage after mount
+  // Hydrate organization from localStorage after mount
   useEffect(() => {
-    setWsIdState(getWsId());
+    setOrgIdState(getOrgId());
     setReady(true);
   }, []);
 
   const handleDone = useCallback(() => {
-    setWsIdState(getWsId());
+    setOrgIdState(getOrgId());
   }, []);
 
   // Public routes bypass the gate entirely
@@ -71,8 +71,8 @@ export default function WorkspaceGate({
   // If no session somehow (middleware should redirect, but defensive)
   if (!session?.user?.email) return null;
 
-  // Gate: show workspace onboarding if no workspace selected
-  if (!wsId) {
+  // Gate: show organization onboarding if no organization selected
+  if (!orgId) {
     return (
       <OnboardingScreen
         email={session.user.email}
@@ -85,7 +85,7 @@ export default function WorkspaceGate({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Onboarding screen (workspace only — no email step)                */
+/*  Onboarding screen (organization only — no email step)             */
 /* ------------------------------------------------------------------ */
 
 function OnboardingScreen({
@@ -107,13 +107,13 @@ function OnboardingScreen({
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      setError("Enter a workspace name.");
+      setError("Enter an organization name.");
       return;
     }
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/workspaces", {
+      const res = await fetch("/api/organizations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim() }),
@@ -122,12 +122,12 @@ function OnboardingScreen({
         const b = await res.json().catch(() => null);
         throw new Error(b?.detail ?? `Error ${res.status}`);
       }
-      const ws: Workspace = await res.json();
-      setWsId(ws.workspace_id);
-      setWsName(ws.name);
+      const org: Organization = await res.json();
+      setOrgId(org.organization_id);
+      setOrgName(org.name);
       onDone();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create workspace.");
+      setError(err instanceof Error ? err.message : "Failed to create organization.");
     } finally {
       setLoading(false);
     }
@@ -142,7 +142,7 @@ function OnboardingScreen({
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/workspaces/join", {
+      const res = await fetch("/api/organizations/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ invite_code: code.trim().toUpperCase() }),
@@ -151,9 +151,9 @@ function OnboardingScreen({
         const b = await res.json().catch(() => null);
         throw new Error(b?.detail ?? `Error ${res.status}`);
       }
-      const ws: Workspace = await res.json();
-      setWsId(ws.workspace_id);
-      setWsName(ws.name);
+      const org: Organization = await res.json();
+      setOrgId(org.organization_id);
+      setOrgName(org.name);
       onDone();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Invalid invite code.");
@@ -171,7 +171,7 @@ function OnboardingScreen({
             Curriculum <span className="text-[#4F46E5]">Engine</span>
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Create or join a workspace to get started.
+            Create or join an organization to get started.
           </p>
         </div>
 
@@ -210,7 +210,7 @@ function OnboardingScreen({
           <form onSubmit={handleCreate} className="mt-6 space-y-5">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-700">
-                Workspace Name
+                Organization Name
               </label>
               <input
                 type="text"
@@ -243,7 +243,7 @@ function OnboardingScreen({
                   Creating…
                 </span>
               ) : (
-                "Create Workspace"
+                "Create Organization"
               )}
             </button>
           </form>
@@ -266,7 +266,7 @@ function OnboardingScreen({
                 autoFocus
               />
               <p className="text-xs text-gray-400">
-                Ask the workspace owner for the invite code.
+                Ask the organization owner for the invite code.
               </p>
             </div>
 
@@ -288,7 +288,7 @@ function OnboardingScreen({
                   Joining…
                 </span>
               ) : (
-                "Join Workspace"
+                "Join Organization"
               )}
             </button>
           </form>
@@ -296,7 +296,7 @@ function OnboardingScreen({
 
         {/* ── Microcopy ──────────────────────────────────────────── */}
         <p className="mt-5 text-center text-[11px] text-gray-400">
-          Workspaces keep your analyses organized and private.
+          Organizations keep your analyses organized and private.
         </p>
       </div>
     </div>

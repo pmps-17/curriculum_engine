@@ -3,8 +3,8 @@ import { API_BASE_URL } from "@/lib/config";
 import { getSessionEmail, getBackendAuthHeaders } from "@/lib/auth";
 
 /**
- * GET  /api/workspaces  → backend GET /api/v1/workspaces
- * POST /api/workspaces  → backend POST /api/v1/workspaces
+ * GET  /api/organizations  → backend GET /api/v1/organizations
+ * POST /api/organizations  → backend POST /api/v1/organizations
  *
  * Reads email from the NextAuth session (server-side).
  */
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ detail: "Not authenticated." }, { status: 401 });
   }
 
-  const backendUrl = `${API_BASE_URL}/api/v1/workspaces`;
+  const backendUrl = `${API_BASE_URL}/api/v1/organizations`;
   const authHeaders = await getBackendAuthHeaders();
 
   let upstream: Response;
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       signal: AbortSignal.timeout(10_000),
     });
   } catch (err) {
-    console.error("[workspaces] Backend unreachable:", err);
+    console.error("[organizations] Backend unreachable:", err);
     return NextResponse.json({ error: "BACKEND_UNREACHABLE" }, { status: 502 });
   }
 
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
   }
 
-  const backendUrl = `${API_BASE_URL}/api/v1/workspaces`;
+  const backendUrl = `${API_BASE_URL}/api/v1/organizations`;
   const authHeaders = await getBackendAuthHeaders();
 
   let upstream: Response;
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       signal: AbortSignal.timeout(10_000),
     });
   } catch (err) {
-    console.error("[workspaces] Backend unreachable:", err);
+    console.error("[organizations] Backend unreachable:", err);
     return NextResponse.json({ error: "BACKEND_UNREACHABLE" }, { status: 502 });
   }
 

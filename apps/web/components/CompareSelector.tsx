@@ -34,7 +34,7 @@ export default function CompareSelector({
           </svg>
         </div>
         <p className="text-sm text-gray-500">
-          No analyses yet in this workspace.
+          No analyses yet in this organization.
         </p>
         <p className="text-xs text-gray-400">
           Run an analysis from the <a href="/" className="text-[#4F46E5] hover:underline">dashboard</a> first.

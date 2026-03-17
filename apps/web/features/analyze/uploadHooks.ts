@@ -24,13 +24,13 @@ export interface UploadResponse {
 export function useUploadMutation() {
   return useMutation<UploadResponse, ApiError, FormData>({
     mutationFn: async (formData) => {
-      // Inject workspace_id for tenancy
-      const wsId =
+      // Inject organization_id for tenancy
+      const orgId =
         typeof window !== "undefined"
-          ? localStorage.getItem("workspace_id") ?? ""
+          ? localStorage.getItem("organization_id") ?? ""
           : "";
 
-      if (wsId) formData.append("workspace_id", wsId);
+      if (orgId) formData.append("organization_id", orgId);
 
       const res = await fetch(proxyPaths.uploads, {
         method: "POST",
