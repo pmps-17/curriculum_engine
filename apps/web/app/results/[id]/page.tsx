@@ -122,10 +122,12 @@ export default function ResultsPage({
       {/* Header */}
       <header className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-4xl items-center gap-4 px-6 py-6">
-          <Link
-            href="/"
+          {/* Browser-back button */}
+          <button
+            type="button"
+            onClick={() => window.history.back()}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
-            aria-label="Back to home"
+            aria-label="Go back"
           >
             <svg
               className="h-4 w-4"
@@ -136,12 +138,29 @@ export default function ResultsPage({
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
-          </Link>
-          <div className="min-w-0">
+          </button>
+
+          <div className="min-w-0 flex-1">
             <h1 className="text-xl font-bold tracking-tight text-gray-900">
               Analysis <span className="text-[#4F46E5]">Results</span>
             </h1>
             <p className="truncate text-xs text-gray-400 font-mono">{id}</p>
+          </div>
+
+          {/* Contextual quick-links */}
+          <div className="hidden items-center gap-2 sm:flex">
+            <Link
+              href="/"
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[#4F46E5]/30 hover:text-[#4F46E5]"
+            >
+              ← Analyze
+            </Link>
+            <Link
+              href="/compare"
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[#4F46E5]/30 hover:text-[#4F46E5]"
+            >
+              Compare
+            </Link>
           </div>
         </div>
       </header>
