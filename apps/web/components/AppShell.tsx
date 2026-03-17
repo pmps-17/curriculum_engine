@@ -17,6 +17,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
+  // /organizations page is accessible without an org selected
+  const skipGate = pathname.startsWith("/organizations");
+
   return (
     <>
       {/* Global nav bar */}
@@ -25,15 +28,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <a href="/" className="text-sm font-bold text-gray-900">
             Curriculum <span className="text-[#4F46E5]">Engine</span>
           </a>
+          <a href="/organizations" className="text-sm text-gray-500 transition hover:text-[#4F46E5]">
+            Organizations
+          </a>
           <a href="/compare" className="text-sm text-gray-500 transition hover:text-[#4F46E5]">
             Compare
           </a>
         </div>
         <OrganizationHeader />
       </nav>
-      <OrganizationGate>
-        {children}
-      </OrganizationGate>
+      {skipGate ? (
+        children
+      ) : (
+        <OrganizationGate>
+          {children}
+        </OrganizationGate>
+      )}
     </>
   );
 }

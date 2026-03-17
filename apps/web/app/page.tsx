@@ -1,6 +1,25 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getOrgId } from "@/components/OrganizationGate";
 import AnalyzeForm from "@/components/AnalyzeForm";
 
 export default function HomePage() {
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    // If no organization selected, send user to organizations dashboard
+    if (!getOrgId()) {
+      router.replace("/organizations");
+      return;
+    }
+    setReady(true);
+  }, [router]);
+
+  if (!ready) return null;
+
   return (
     <main className="min-h-screen bg-gray-50">
       {/* Header */}
