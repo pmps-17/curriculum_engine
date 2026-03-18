@@ -12,6 +12,7 @@ export const AnalyzeRequestSchema = z
     curriculum_text: z.string().optional(),
     document_id: z.string().uuid().optional(),
     rubric_text: z.string().optional(),
+    curriculum_set_id: z.string().uuid().optional(),
   })
   .refine(
     (d) =>

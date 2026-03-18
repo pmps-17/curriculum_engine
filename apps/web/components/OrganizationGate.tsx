@@ -3,6 +3,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
+import { getOrgId, getOrgName, setOrg, clearOrg } from "@/lib/orgStore";
+
+/* ------------------------------------------------------------------ */
+/*  Backward-compat re-exports (consumed by other components)         */
+/* ------------------------------------------------------------------ */
+
+/** @deprecated use setOrg(id, name) from lib/orgStore instead */
+function setOrgId(v: string) { localStorage.setItem("organization_id", v); }
+/** @deprecated use setOrg(id, name) from lib/orgStore instead */
+function setOrgName(v: string) { localStorage.setItem("organization_name", v); }
+
+export { getOrgId, getOrgName, setOrgId, setOrgName };
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                             */
@@ -14,27 +26,6 @@ interface Organization {
   invite_code?: string | null;
   created_at?: string;
 }
-
-/* ------------------------------------------------------------------ */
-/*  localStorage helpers (org only — email comes from session)        */
-/* ------------------------------------------------------------------ */
-
-function getOrgId(): string {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("organization_id") ?? "";
-}
-function setOrgId(v: string) {
-  localStorage.setItem("organization_id", v);
-}
-function getOrgName(): string {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("organization_name") ?? "";
-}
-function setOrgName(v: string) {
-  localStorage.setItem("organization_name", v);
-}
-
-export { getOrgId, getOrgName, setOrgId, setOrgName };
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                         */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { AnalyzeRequestSchema, type AnalyzeRequest } from "@/lib/schemas";
 import { useAnalyzeMutation, type AnalyzeResponse } from "@/features/analyze/hooks";
@@ -8,6 +8,8 @@ import { useUploadMutation, type UploadResponse } from "@/features/analyze/uploa
 import { ApiError } from "@/lib/api";
 import { saveRecentAnalysis } from "@/lib/recentAnalyses";
 import { proxyPaths } from "@/lib/config";
+import { getOrgId } from "@/lib/orgStore";
+import type { CurriculumSetData } from "@/components/CurriculumSetCard";
 
 /* ------------------------------------------------------------------ */
 /*  Shared input style                                                */
@@ -21,10 +23,26 @@ const INPUT_ERR = "border-red-400 focus:border-red-400";
 type Mode = "paste" | "upload";
 
 /* ------------------------------------------------------------------ */
+/*  Props                                                             */
+/* ------------------------------------------------------------------ */
+
+interface AnalyzeFormProps {
+  /** Pre-locked curriculum set (from /library/[setId] detail page) */
+  curriculumSetId?: string;
+  curriculumSetName?: string;
+  /** Callback after a successful analysis submission */
+  onSuccess?: () => void;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Component                                                         */
 /* ------------------------------------------------------------------ */
 
-export default function AnalyzeForm() {
+export default function AnalyzeForm({
+  curriculumSetId,
+  curriculumSetName,
+  onSuccess,
+}: AnalyzeFormProps = {}) {
   const [mode, setMode] = useState<Mode>("paste");
 
   const [form, setForm] = useState<AnalyzeRequest>({
@@ -46,8 +64,33 @@ export default function AnalyzeForm() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
+  // Curriculum Set dropdown state (only used in standalone mode)
+  const [availableSets, setAvailableSets] = useState<CurriculumSetData[]>([]);
+  const [selectedSetId, setSelectedSetId] = useState<string>("");
+  const [setsLoading, setSetsLoading] = useState(false);
+
   const analyzeMutation = useAnalyzeMutation();
   const uploadMutation = useUploadMutation();
+
+  // Resolve which curriculum_set_id to use
+  const effectiveSetId = curriculumSetId || selectedSetId || undefined;
+  const effectiveSetName =
+    curriculumSetName ||
+    availableSets.find((s) => s.id === selectedSetId)?.title ||
+    undefined;
+
+  /* ── Load available sets when in standalone mode ─────────────── */
+  useEffect(() => {
+    if (curriculumSetId) return; // locked — no need to fetch
+    const orgId = getOrgId();
+    if (!orgId) return;
+    setSetsLoading(true);
+    fetch(`${proxyPaths.curriculumSets}?organization_id=${orgId}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: CurriculumSetData[]) => setAvailableSets(data))
+      .catch(() => setAvailableSets([]))
+      .finally(() => setSetsLoading(false));
+  }, [curriculumSetId]);
 
   /* ---- helpers ---- */
 
@@ -82,6 +125,7 @@ export default function AnalyzeForm() {
     if (form.title) fd.append("title", form.title);
     if (form.subject) fd.append("subject", form.subject);
     if (form.grade_band) fd.append("grade_band", form.grade_band);
+    if (effectiveSetId) fd.append("curriculum_set_id", effectiveSetId);
 
     uploadMutation.mutate(fd, {
       onSuccess: (data) => {
@@ -125,6 +169,11 @@ export default function AnalyzeForm() {
 
     const payload: AnalyzeRequest = { ...form };
 
+    // Attach curriculum set if one is selected/locked
+    if (effectiveSetId) {
+      payload.curriculum_set_id = effectiveSetId;
+    }
+
     // In upload mode, use document_id instead of curriculum_text
     if (mode === "upload") {
       delete payload.curriculum_text;
@@ -160,6 +209,7 @@ export default function AnalyzeForm() {
               ? localStorage.getItem("organization_id") ?? undefined
               : undefined,
         });
+        onSuccess?.();
       },
     });
   }
@@ -213,6 +263,46 @@ export default function AnalyzeForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* ── Curriculum Set context banner / dropdown ───────────── */}
+      {curriculumSetId && effectiveSetName ? (
+        /* Locked mode: set detail page pre-fills this */
+        <div className="flex items-center gap-2.5 rounded-lg border border-[#4F46E5]/20 bg-[#4F46E5]/5 px-4 py-3">
+          <svg className="h-4 w-4 shrink-0 text-[#4F46E5]" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+          </svg>
+          <span className="text-sm text-[#4F46E5]">
+            This upload will be saved under: <strong>{effectiveSetName}</strong>
+          </span>
+        </div>
+      ) : availableSets.length > 0 ? (
+        /* Standalone mode: optional set selector */
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="curriculum_set" className="text-sm font-medium text-gray-700">
+            Curriculum Set <span className="text-xs font-normal text-gray-400">(optional)</span>
+          </label>
+          <select
+            id="curriculum_set"
+            value={selectedSetId}
+            onChange={(e) => setSelectedSetId(e.target.value)}
+            disabled={setsLoading}
+            className={`${INPUT_BASE} ${INPUT_OK} bg-white`}
+          >
+            <option value="">— None —</option>
+            {availableSets.map((s) => (
+              <option key={s.id} value={s.id}>{s.title}</option>
+            ))}
+          </select>
+          {selectedSetId && effectiveSetName && (
+            <p className="flex items-center gap-1.5 text-xs text-[#4F46E5]">
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+              </svg>
+              This upload will be saved under: <strong>{effectiveSetName}</strong>
+            </p>
+          )}
+        </div>
+      ) : null}
+
       {/* Metadata fields */}
       {(["title", "subject", "grade_band"] as const).map((name) => (
         <div key={name} className="flex flex-col gap-1.5">

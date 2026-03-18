@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { getOrgId } from "@/components/OrganizationGate";
+import { getOrgId } from "@/lib/orgStore";
 import TopNav from "@/components/TopNav";
 
 /**

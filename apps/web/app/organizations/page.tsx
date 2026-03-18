@@ -3,25 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import {
-  getOrgId,
-  setOrgId,
-  setOrgName,
-} from "@/components/OrganizationGate";
+import { getOrgId, setOrg, clearOrg } from "@/lib/orgStore";
 import OrganizationCard from "@/components/OrganizationCard";
+import type { OrganizationCardData } from "@/components/OrganizationCard";
 import CreateOrganizationModal from "@/components/CreateOrganizationModal";
 import JoinOrganizationModal from "@/components/JoinOrganizationModal";
-
-/* ------------------------------------------------------------------ */
-/*  Types                                                             */
-/* ------------------------------------------------------------------ */
-
-interface Organization {
-  organization_id: string;
-  name: string;
-  invite_code?: string | null;
-  created_at?: string | null;
-}
+import EditOrganizationModal from "@/components/EditOrganizationModal";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 /* ------------------------------------------------------------------ */
 /*  Page                                                              */
@@ -32,11 +20,18 @@ export default function OrganizationsPage() {
   const { data: session } = useSession();
   const email = session?.user?.email ?? "";
 
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
+
+  // Edit state
+  const [editTarget, setEditTarget] = useState<OrganizationCardData | null>(null);
+
+  // Leave state
+  const [leaveTarget, setLeaveTarget] = useState<OrganizationCardData | null>(null);
+  const [leaveLoading, setLeaveLoading] = useState(false);
 
   /* ── Fetch orgs ──────────────────────────────────────────────────── */
   const fetchOrganizations = useCallback(async () => {
@@ -45,7 +40,7 @@ export default function OrganizationsPage() {
     try {
       const res = await fetch("/api/organizations");
       if (!res.ok) throw new Error(`Error ${res.status}`);
-      const data: Organization[] = await res.json();
+      const data: OrganizationCardData[] = await res.json();
       setOrganizations(data);
     } catch {
       setError("Failed to load organizations.");
@@ -59,25 +54,73 @@ export default function OrganizationsPage() {
   }, [fetchOrganizations]);
 
   /* ── Select & navigate ───────────────────────────────────────────── */
-  function selectOrg(org: { organization_id: string; name: string }) {
-    setOrgId(org.organization_id);
-    setOrgName(org.name);
+  function handleSelect(org: OrganizationCardData) {
+    setOrg(org.organization_id, org.name);
     router.push("/library");
   }
 
   /* ── Created / Joined handlers ───────────────────────────────────── */
   function handleCreated(org: { organization_id: string; name: string }) {
     setShowCreate(false);
-    selectOrg(org);
+    setOrg(org.organization_id, org.name);
+    router.push("/library");
   }
 
   function handleJoined(org: { organization_id: string; name: string }) {
     setShowJoin(false);
-    selectOrg(org);
+    setOrg(org.organization_id, org.name);
+    router.push("/library");
   }
 
-  /* ── Current org id for highlighting ─────────────────────────────── */
-  const activeOrgId = typeof window !== "undefined" ? getOrgId() : "";
+  /* ── Edit saved ──────────────────────────────────────────────────── */
+  function handleEditSaved(updated: { name: string; description: string | null }) {
+    if (!editTarget) return;
+    // Update local list
+    setOrganizations((prev) =>
+      prev.map((o) =>
+        o.organization_id === editTarget.organization_id
+          ? { ...o, name: updated.name, description: updated.description }
+          : o,
+      ),
+    );
+    // If the active org was renamed, update stored name
+    if (editTarget.organization_id === getOrgId()) {
+      setOrg(editTarget.organization_id, updated.name);
+    }
+    setEditTarget(null);
+  }
+
+  /* ── Leave confirm ───────────────────────────────────────────────── */
+  async function handleLeaveConfirm() {
+    if (!leaveTarget) return;
+    setLeaveLoading(true);
+    try {
+      const res = await fetch(`/api/organizations/${leaveTarget.organization_id}/leave`, {
+        method: "POST",
+      });
+      if (res.status === 409) {
+        const b = await res.json().catch(() => null);
+        alert(b?.detail ?? "Cannot leave — you are the last member.");
+        return;
+      }
+      if (!res.ok && res.status !== 204) {
+        throw new Error(`Error ${res.status}`);
+      }
+      // Remove from local list
+      setOrganizations((prev) =>
+        prev.filter((o) => o.organization_id !== leaveTarget.organization_id),
+      );
+      // If the active org was left, clear selection
+      if (leaveTarget.organization_id === getOrgId()) {
+        clearOrg();
+      }
+    } catch {
+      alert("Failed to leave organization.");
+    } finally {
+      setLeaveLoading(false);
+      setLeaveTarget(null);
+    }
+  }
 
   /* ── Render ──────────────────────────────────────────────────────── */
   return (
@@ -91,7 +134,7 @@ export default function OrganizationsPage() {
             </h1>
             {email && (
               <p className="mt-0.5 text-sm text-gray-500">
-                Manage your organizations and analyses
+                Select an organization to start working
               </p>
             )}
           </div>
@@ -148,20 +191,17 @@ export default function OrganizationsPage() {
         {/* ── Empty state ──────────────────────────────────────────── */}
         {!loading && !error && organizations.length === 0 && (
           <div className="mt-12 flex flex-col items-center text-center">
-            {/* Icon */}
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#4F46E5]/10">
               <svg className="h-8 w-8 text-[#4F46E5]" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008zm0 3h.008v.008h-.008v-.008z" />
               </svg>
             </div>
-
             <h2 className="mt-5 text-lg font-semibold text-gray-900">
               No organizations yet
             </h2>
             <p className="mt-1.5 max-w-sm text-sm text-gray-500">
               Create an organization to start analyzing curriculum, or join an existing one with an invite code.
             </p>
-
             <div className="mt-6 flex items-center gap-3">
               <button
                 type="button"
@@ -190,12 +230,10 @@ export default function OrganizationsPage() {
             {organizations.map((org) => (
               <OrganizationCard
                 key={org.organization_id}
-                name={org.name}
-                organizationId={org.organization_id}
-                inviteCode={org.invite_code}
-                createdAt={org.created_at}
-                isActive={org.organization_id === activeOrgId}
-                onOpen={() => selectOrg(org)}
+                org={org}
+                onSelect={handleSelect}
+                onEdit={setEditTarget}
+                onLeave={setLeaveTarget}
               />
             ))}
           </div>
@@ -212,6 +250,30 @@ export default function OrganizationsPage() {
         open={showJoin}
         onClose={() => setShowJoin(false)}
         onJoined={handleJoined}
+      />
+      <EditOrganizationModal
+        open={!!editTarget}
+        organizationId={editTarget?.organization_id ?? ""}
+        initialName={editTarget?.name ?? ""}
+        initialDescription={editTarget?.description ?? ""}
+        initialContactName={editTarget?.contact_name ?? ""}
+        initialContactEmail={editTarget?.contact_email ?? ""}
+        initialCountryCode={editTarget?.country_code ?? ""}
+        initialStateCode={editTarget?.state_code ?? ""}
+        initialStateName={editTarget?.state_name ?? ""}
+        initialCity={editTarget?.city ?? ""}
+        onClose={() => setEditTarget(null)}
+        onSaved={handleEditSaved}
+      />
+      <ConfirmDialog
+        open={!!leaveTarget}
+        title="Leave Organization"
+        description={`Are you sure you want to leave "${leaveTarget?.name ?? ""}"? You'll need an invite code to rejoin.`}
+        confirmLabel="Leave"
+        confirmVariant="danger"
+        loading={leaveLoading}
+        onConfirm={handleLeaveConfirm}
+        onCancel={() => setLeaveTarget(null)}
       />
     </main>
   );

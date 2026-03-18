@@ -4,15 +4,16 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
-import { getOrgId, getOrgName } from "@/components/OrganizationGate";
+import { getOrgId, clearOrg } from "@/lib/orgStore";
 
 /* ------------------------------------------------------------------ */
 /*  Nav items                                                         */
 /* ------------------------------------------------------------------ */
 
 const NAV_ITEMS = [
-  { href: "/library",       label: "Library" },
-  { href: "/compare",       label: "Compare" },
+  { href: "/organizations", label: "Organizations", requiresOrg: false },
+  { href: "/library",       label: "Library",       requiresOrg: true },
+  { href: "/compare",       label: "Compare",       requiresOrg: true },
 ] as const;
 
 /* ------------------------------------------------------------------ */
@@ -24,28 +25,30 @@ export default function TopNav() {
   const { data: session } = useSession();
   const email = session?.user?.email ?? "";
 
-  const [orgName, setOrgName] = useState("");
+  const [hasOrg, setHasOrg] = useState(false);
 
   useEffect(() => {
-    setOrgName(getOrgName());
+    setHasOrg(!!getOrgId());
   }, []);
 
   // Listen for org changes (e.g. from /organizations page selecting one)
   useEffect(() => {
     function onStorage(e: StorageEvent) {
-      if (e.key === "organization_name") setOrgName(e.newValue ?? "");
+      if (e.key === "organization_name") {
+        setHasOrg(!!getOrgId());
+      }
     }
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   function handleLogout() {
-    localStorage.removeItem("organization_id");
-    localStorage.removeItem("organization_name");
+    clearOrg();
     signOut({ callbackUrl: "/login" });
   }
 
   function isActive(href: string) {
+    if (href === "/organizations") return pathname.startsWith("/organizations");
     if (href === "/library") return pathname === "/" || pathname.startsWith("/library");
     return pathname.startsWith(href);
   }
@@ -69,41 +72,43 @@ export default function TopNav() {
           </Link>
 
           {/* Nav links */}
-          {NAV_ITEMS.map(({ href, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`relative rounded-md px-3 py-1.5 text-[13px] font-medium transition ${
-                isActive(href)
-                  ? "text-[#4F46E5]"
-                  : "text-gray-500 hover:text-gray-900"
-              }`}
-            >
-              {label}
-              {isActive(href) && (
-                <span className="absolute inset-x-1 -bottom-[9px] h-[2px] rounded-full bg-[#4F46E5]" />
-              )}
-            </Link>
-          ))}
+          {NAV_ITEMS.map(({ href, label, requiresOrg }) => {
+            const disabled = requiresOrg && !hasOrg;
+            const active = isActive(href);
+
+            if (disabled) {
+              return (
+                <span
+                  key={href}
+                  className="relative rounded-md px-3 py-1.5 text-[13px] font-medium text-gray-300 cursor-default"
+                  title="Select an organization first"
+                >
+                  {label}
+                </span>
+              );
+            }
+
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`relative rounded-md px-3 py-1.5 text-[13px] font-medium transition ${
+                  active
+                    ? "text-[#4F46E5]"
+                    : "text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                {label}
+                {active && (
+                  <span className="absolute inset-x-1 -bottom-[9px] h-[2px] rounded-full bg-[#4F46E5]" />
+                )}
+              </Link>
+            );
+          })}
         </div>
 
-        {/* ── Right: org pill + email + logout ────────────────────── */}
+        {/* ── Right: email + logout ────────────────────────────── */}
         <div className="flex items-center gap-3">
-          {/* Org context pill */}
-          {orgName && (
-            <Link
-              href="/organizations"
-              className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-[11px] text-gray-600 transition hover:border-[#4F46E5]/30 hover:bg-[#4F46E5]/5"
-              title="Switch organization"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-[#10B981]" />
-              <span className="max-w-[120px] truncate font-medium">{orgName}</span>
-              <svg className="h-3 w-3 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
-              </svg>
-            </Link>
-          )}
-
           {/* Email */}
           {email && (
             <span className="hidden text-[11px] text-gray-400 lg:inline">

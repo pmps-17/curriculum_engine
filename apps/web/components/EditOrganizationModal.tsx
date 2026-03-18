@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Country, State, ICountry, IState } from "country-state-city";
 import SearchableSelect, { type SelectOption } from "@/components/SearchableSelect";
 
@@ -8,10 +8,19 @@ import SearchableSelect, { type SelectOption } from "@/components/SearchableSele
 /*  Props                                                             */
 /* ------------------------------------------------------------------ */
 
-interface CreateOrganizationModalProps {
+interface EditOrganizationModalProps {
   open: boolean;
+  organizationId: string;
+  initialName: string;
+  initialDescription: string;
+  initialContactName?: string;
+  initialContactEmail?: string;
+  initialCountryCode?: string;
+  initialStateCode?: string;
+  initialStateName?: string;
+  initialCity?: string;
   onClose: () => void;
-  onCreated: (org: { organization_id: string; name: string }) => void;
+  onSaved: (updated: { name: string; description: string | null }) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -27,25 +36,53 @@ const LABEL = "text-xs font-medium text-gray-600";
 /*  Component                                                         */
 /* ------------------------------------------------------------------ */
 
-export default function CreateOrganizationModal({
+export default function EditOrganizationModal({
   open,
+  organizationId,
+  initialName,
+  initialDescription,
+  initialContactName = "",
+  initialContactEmail = "",
+  initialCountryCode = "",
+  initialStateCode = "",
+  initialStateName = "",
+  initialCity = "",
   onClose,
-  onCreated,
-}: CreateOrganizationModalProps) {
+  onSaved,
+}: EditOrganizationModalProps) {
   /* ── Core fields ───────────────────────────────────────────────── */
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [contactName, setContactName] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
+  const [name, setName] = useState(initialName);
+  const [description, setDescription] = useState(initialDescription);
+  const [contactName, setContactName] = useState(initialContactName);
+  const [contactEmail, setContactEmail] = useState(initialContactEmail);
 
-  /* ── Location fields (store both name + code) ──────────────────── */
-  const [countryCode, setCountryCode] = useState("");      // isoCode
-  const [stateCode, setStateCode] = useState("");           // isoCode or typed value
-  const [stateNameTyped, setStateNameTyped] = useState(""); // free-text when no dropdown
-  const [city, setCity] = useState("");
+  /* ── Location ──────────────────────────────────────────────────── */
+  const [countryCode, setCountryCode] = useState(initialCountryCode);
+  const [stateCode, setStateCode] = useState(initialStateCode);
+  const [stateNameTyped, setStateNameTyped] = useState(initialStateName);
+  const [city, setCity] = useState(initialCity);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  /* ── Sync when modal reopens ───────────────────────────────────── */
+  useEffect(() => {
+    if (open) {
+      setName(initialName);
+      setDescription(initialDescription);
+      setContactName(initialContactName);
+      setContactEmail(initialContactEmail);
+      setCountryCode(initialCountryCode);
+      setStateCode(initialStateCode);
+      setStateNameTyped(initialStateName);
+      setCity(initialCity);
+      setError("");
+    }
+  }, [
+    open, initialName, initialDescription,
+    initialContactName, initialContactEmail,
+    initialCountryCode, initialStateCode, initialStateName, initialCity,
+  ]);
 
   /* ── Derived data ──────────────────────────────────────────────── */
 
@@ -68,7 +105,6 @@ export default function CreateOrganizationModal({
 
   const hasStates = stateOptions.length > 0;
 
-  /* Look up display names from codes */
   const selectedCountry = countryCode
     ? Country.getCountryByCode(countryCode)
     : null;
@@ -77,27 +113,9 @@ export default function CreateOrganizationModal({
       ? State.getStateByCodeAndCountry(stateCode, countryCode)
       : null;
 
-  /* ── Reset ─────────────────────────────────────────────────────── */
+  if (!open) return null;
 
-  function resetForm() {
-    setName("");
-    setDescription("");
-    setContactName("");
-    setContactEmail("");
-    setCountryCode("");
-    setStateCode("");
-    setStateNameTyped("");
-    setCity("");
-    setError("");
-  }
-
-  function handleClose() {
-    resetForm();
-    onClose();
-  }
-
-  /* ── Country change resets state/city ───────────────────────────── */
-
+  /* ── Country change resets dependent fields ────────────────────── */
   function handleCountryChange(val: string) {
     setCountryCode(val);
     setStateCode("");
@@ -107,37 +125,34 @@ export default function CreateOrganizationModal({
   }
 
   /* ── Submit ────────────────────────────────────────────────────── */
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      setError("Enter an organization name.");
+      setError("Name cannot be empty.");
       return;
     }
     setLoading(true);
     setError("");
 
-    /* Build payload — only include fields that have values */
-    const payload: Record<string, string | null> = { name: name.trim() };
-    if (description.trim()) payload.description = description.trim();
-    if (contactName.trim()) payload.contact_name = contactName.trim();
-    if (contactEmail.trim()) payload.contact_email = contactEmail.trim();
-    if (selectedCountry) {
-      payload.country_name = selectedCountry.name;
-      payload.country_code = selectedCountry.isoCode;
-    }
-    if (hasStates && selectedState) {
-      payload.state_name = selectedState.name;
-      payload.state_code = selectedState.isoCode;
-    } else if (!hasStates && stateNameTyped.trim()) {
-      payload.state_name = stateNameTyped.trim();
-      payload.state_code = stateNameTyped.trim();
-    }
-    if (city.trim()) payload.city = city.trim();
+    const payload: Record<string, string | null> = {
+      name: name.trim(),
+      description: description.trim() || null,
+      contact_name: contactName.trim() || null,
+      contact_email: contactEmail.trim() || null,
+      country_name: selectedCountry?.name ?? null,
+      country_code: selectedCountry?.isoCode ?? null,
+      state_name: hasStates
+        ? (selectedState?.name ?? null)
+        : (stateNameTyped.trim() || null),
+      state_code: hasStates
+        ? (selectedState?.isoCode ?? null)
+        : (stateNameTyped.trim() || null),
+      city: city.trim() || null,
+    };
 
     try {
-      const res = await fetch("/api/organizations", {
-        method: "POST",
+      const res = await fetch(`/api/organizations/${organizationId}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -146,21 +161,16 @@ export default function CreateOrganizationModal({
         throw new Error(b?.detail ?? `Error ${res.status}`);
       }
       const org = await res.json();
-      resetForm();
-      onCreated({ organization_id: org.organization_id, name: org.name });
+      onSaved({ name: org.name, description: org.description ?? "" });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create organization.");
+      setError(err instanceof Error ? err.message : "Save failed.");
     } finally {
       setLoading(false);
     }
   }
 
-  /* ── Render ────────────────────────────────────────────────────── */
-
-  if (!open) return null;
-
   function handleBackdrop(e: React.MouseEvent) {
-    if (e.target === e.currentTarget) handleClose();
+    if (e.target === e.currentTarget) onClose();
   }
 
   return (
@@ -171,15 +181,10 @@ export default function CreateOrganizationModal({
       <div className="w-full max-w-lg rounded-2xl border border-gray-200/80 bg-white shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <div>
-            <h2 className="text-base font-bold text-gray-900">Create Organization</h2>
-            <p className="mt-0.5 text-xs text-gray-500">
-              Set up your organization. You can invite members later.
-            </p>
-          </div>
+          <h2 className="text-base font-bold text-gray-900">Edit Organization</h2>
           <button
             type="button"
-            onClick={handleClose}
+            onClick={onClose}
             className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -193,14 +198,13 @@ export default function CreateOrganizationModal({
           {/* ── Name + Description ─────────────────────────────────── */}
           <div className="space-y-3">
             <div className="flex flex-col gap-1">
-              <label className={LABEL}>Organization Name *</label>
+              <label className={LABEL}>Name *</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => { setName(e.target.value); setError(""); }}
-                placeholder="e.g., Greenfield Academy"
-                autoFocus
                 className={INPUT}
+                autoFocus
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -294,10 +298,10 @@ export default function CreateOrganizationModal({
           {/* ── Error + Actions ─────────────────────────────────────── */}
           {error && <p className="text-xs text-red-500">{error}</p>}
 
-          <div className="flex items-center justify-end gap-3 pt-1">
+          <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="button"
-              onClick={handleClose}
+              onClick={onClose}
               className="h-9 rounded-lg px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
             >
               Cancel
@@ -305,19 +309,9 @@ export default function CreateOrganizationModal({
             <button
               type="submit"
               disabled={loading || !name.trim()}
-              className="flex h-9 items-center justify-center rounded-lg bg-[#4F46E5] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#4338CA] disabled:cursor-not-allowed disabled:opacity-40"
+              className="h-9 rounded-lg bg-[#4F46E5] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#4338CA] disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Creating…
-                </span>
-              ) : (
-                "Create"
-              )}
+              {loading ? "Saving…" : "Save"}
             </button>
           </div>
         </form>

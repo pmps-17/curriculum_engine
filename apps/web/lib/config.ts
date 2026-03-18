@@ -41,4 +41,9 @@ export const proxyPaths = {
   uploads: "/api/uploads",
   documentPreview: (id: string) => `/api/documents/${id}/preview`,
   documentDownload: (id: string) => `/api/documents/${id}/download`,
+  organizations: "/api/organizations",
+  organizationPatch: (id: string) => `/api/organizations/${id}`,
+  organizationLeave: (id: string) => `/api/organizations/${id}/leave`,
+  curriculumSets: "/api/curriculum-sets",
+  curriculumSetDetail: (id: string) => `/api/curriculum-sets/${id}`,
 } as const;

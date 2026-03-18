@@ -10,14 +10,14 @@ import Link from "next/link";
 export interface CurriculumSetItem {
   /** Primary key for the row — document_id when available, else latest analysis_run_id. */
   id: string;
-  /** Latest analysis run id (for "View Report" / re-run). */
+  /** Latest *completed* analysis run id (null if none completed). */
   latest_run_id: string | null;
   /** Total number of analysis runs for this document. */
   run_count: number;
   title: string;
   subject: string;
   grade_band: string;
-  /** Status of the latest analysis run. */
+  /** Status of the most recent analysis run. */
   status: string;
   created_at: string;
   document_id: string | null;
@@ -26,8 +26,6 @@ export interface CurriculumSetItem {
 interface CurriculumSetRowProps {
   item: CurriculumSetItem;
   onRerun: (item: CurriculumSetItem) => void;
-  onEdit: (item: CurriculumSetItem) => void;
-  onDelete: (item: CurriculumSetItem) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -70,8 +68,6 @@ function timeAgo(iso: string): string {
 export default function CurriculumSetRow({
   item,
   onRerun,
-  onEdit,
-  onDelete,
 }: CurriculumSetRowProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -89,8 +85,7 @@ export default function CurriculumSetRow({
   }, [menuOpen]);
 
   const badge = statusBadge(item.status);
-  const isAnalyzed = badge.label === "Analyzed";
-  const hasReport = isAnalyzed && item.latest_run_id;
+  const hasCompletedReport = item.latest_run_id !== null;
 
   return (
     <div className="group flex items-center gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm transition hover:border-gray-300 hover:shadow-md">
@@ -124,7 +119,7 @@ export default function CurriculumSetRow({
           {item.run_count > 1 && (
             <>
               <span className="text-gray-300">·</span>
-              <span>{item.run_count} runs</span>
+              <span>{item.run_count} {item.run_count === 1 ? "analysis" : "analyses"}</span>
             </>
           )}
           <span className="text-gray-300">·</span>
@@ -132,14 +127,21 @@ export default function CurriculumSetRow({
         </div>
       </div>
 
-      {/* ── View report button (shown when analyzed) ────────────────── */}
-      {hasReport && (
+      {/* ── View report button ──────────────────────────────────────── */}
+      {hasCompletedReport ? (
         <Link
           href={`/results/${item.latest_run_id}`}
           className="hidden shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[#4F46E5]/30 hover:text-[#4F46E5] sm:inline-flex"
         >
           View Report
         </Link>
+      ) : (
+        <span
+          className="hidden shrink-0 cursor-default rounded-lg border border-gray-100 px-3 py-1.5 text-xs font-medium text-gray-300 sm:inline-flex"
+          title="No completed report yet"
+        >
+          View Report
+        </span>
       )}
 
       {/* ── 3-dot menu ──────────────────────────────────────────────── */}
@@ -156,9 +158,9 @@ export default function CurriculumSetRow({
         </button>
 
         {menuOpen && (
-          <div className="absolute right-0 z-50 mt-1 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
+          <div className="absolute right-0 z-50 mt-1 w-52 rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
             {/* View report */}
-            {hasReport && (
+            {hasCompletedReport ? (
               <Link
                 href={`/results/${item.latest_run_id}`}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 transition hover:bg-gray-50"
@@ -169,6 +171,13 @@ export default function CurriculumSetRow({
                 </svg>
                 View Report
               </Link>
+            ) : (
+              <span className="flex w-full items-center gap-2 px-3 py-2 text-xs text-gray-300 cursor-default">
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
+                </svg>
+                <span>View Report <span className="text-[10px] text-gray-300">· no completed report</span></span>
+              </span>
             )}
 
             {/* Re-run analysis */}
@@ -183,32 +192,30 @@ export default function CurriculumSetRow({
               Re-run Analysis
             </button>
 
-            {/* Edit details */}
-            <button
-              type="button"
-              onClick={() => { setMenuOpen(false); onEdit(item); }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 transition hover:bg-gray-50"
-            >
-              <svg className="h-3.5 w-3.5 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-              </svg>
-              Edit Details
-            </button>
-
             {/* Divider */}
             <div className="my-1 border-t border-gray-100" />
 
-            {/* Delete */}
-            <button
-              type="button"
-              onClick={() => { setMenuOpen(false); onDelete(item); }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-red-600 transition hover:bg-red-50"
+            {/* Edit details — disabled */}
+            <span
+              className="flex w-full items-center gap-2 px-3 py-2 text-xs text-gray-300 cursor-default"
+              title="Coming soon — requires document update API"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+              </svg>
+              <span>Edit Details <span className="text-[10px]">· coming soon</span></span>
+            </span>
+
+            {/* Delete — disabled */}
+            <span
+              className="flex w-full items-center gap-2 px-3 py-2 text-xs text-gray-300 cursor-default"
+              title="Coming soon — requires document delete API"
             >
               <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
               </svg>
-              Delete
-            </button>
+              <span>Delete <span className="text-[10px]">· coming soon</span></span>
+            </span>
           </div>
         )}
       </div>

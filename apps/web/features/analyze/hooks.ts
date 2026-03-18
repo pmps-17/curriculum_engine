@@ -24,7 +24,10 @@ export function useAnalyzeMutation() {
           ? localStorage.getItem("organization_id") ?? undefined
           : undefined;
 
-      const payload = { ...data, ...(orgId ? { organization_id: orgId } : {}) };
+      const payload = {
+        ...data,
+        ...(orgId ? { organization_id: orgId } : {}),
+      };
 
       return apiFetch<AnalyzeResponse, typeof payload>(proxyPaths.analyze, {
         method: "POST",

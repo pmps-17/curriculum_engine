@@ -100,6 +100,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       backendFormData.append("organization_id", organization_id);
     }
 
+    const curriculum_set_id = formData.get("curriculum_set_id");
+    if (curriculum_set_id && typeof curriculum_set_id === "string" && curriculum_set_id.trim()) {
+      backendFormData.append("curriculum_set_id", curriculum_set_id);
+    }
+
     // 5. Forward to backend
     const backendUrl = endpoints.uploads();
 
