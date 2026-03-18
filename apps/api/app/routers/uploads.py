@@ -13,6 +13,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.core.db import get_db
 from app.repositories.document_repo import DEFAULT_PREVIEW_LIMIT, DocumentRepo
 from app.repositories.organization_repo import OrganizationRepo
+from app.repositories.curriculum_set_repo import CurriculumSetRepo
 from app.schemas.documents import UploadResponse
 from app.services.upload_service import process_upload, UploadError
 
@@ -34,6 +35,7 @@ async def upload_document(
     grade_band: Optional[str] = Form(None, description="Grade level/band (e.g., 3-5)"),
     school_id: Optional[str] = Form(None, description="School UUID"),
     organization_id: Optional[str] = Form(None, description="Organization UUID (required for tenancy)"),
+    curriculum_set_id: Optional[str] = Form(None, description="CurriculumSet UUID (optional, must belong to org)"),
     include_preview: bool = Query(False, description="Include a truncated text preview in the response."),
     current_user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -84,6 +86,23 @@ async def upload_document(
         if not org_repo.is_member(resolved_organization_id, current_user.user_id):
             raise HTTPException(status_code=403, detail="Not a member of this organization.")
 
+    # ── CurriculumSet validation (optional, must belong to same org) ──
+    resolved_curriculum_set_id: uuid.UUID | None = None
+    if curriculum_set_id:
+        try:
+            resolved_curriculum_set_id = uuid.UUID(curriculum_set_id)
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=400, detail="Invalid curriculum_set_id format.")
+
+        cs_repo = CurriculumSetRepo(db)
+        cs = cs_repo.get_by_id(resolved_curriculum_set_id)
+        if cs is None:
+            raise HTTPException(status_code=404, detail="CurriculumSet not found.")
+        if resolved_organization_id is None:
+            raise HTTPException(status_code=400, detail="organization_id is required when curriculum_set_id is provided.")
+        if cs.organization_id != resolved_organization_id:
+            raise HTTPException(status_code=400, detail="CurriculumSet does not belong to this organization.")
+
     # Read file content
     try:
         content = await file.read()
@@ -131,6 +150,7 @@ async def upload_document(
             grade_band=grade_band,
             organization_id=resolved_organization_id,
             document_id=result.document_id,
+            curriculum_set_id=resolved_curriculum_set_id,
         )
 
         db.commit()

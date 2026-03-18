@@ -226,6 +226,10 @@ class AnalyzeRequest(CamelModel):
         default=None,
         description="Organization to scope this analysis run to.",
     )
+    curriculum_set_id: UUID | None = Field(
+        default=None,
+        description="CurriculumSet to associate this analysis run with (optional).",
+    )
 
     @model_validator(mode="after")
     def at_least_one_source_provided(self):

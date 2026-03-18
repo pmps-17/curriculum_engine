@@ -4,6 +4,9 @@ Endpoints:
 
 - ``POST /api/v1/reviews``                          — create a review
 - ``GET  /api/v1/reviews/{analysis_run_id}``         — list reviews for a run
+
+Both endpoints enforce organization-membership isolation: if the
+analysis run belongs to an organization, the caller must be a member.
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.db import get_db
+from app.models.analysis import AnalysisRun
 from app.repositories.organization_repo import OrganizationRepo
 from app.schemas.review import ReviewRequest, ReviewResponse
 from app.services.review_service import (
@@ -32,6 +36,28 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["Reviews"])
 
 
+# ── helpers ──────────────────────────────────────────────────────────
+
+
+def _enforce_run_membership(
+    db: Session,
+    analysis_run_id: UUID,
+    user_id: UUID,
+) -> None:
+    """Raise 403 when the analysis run belongs to an org the user is not in."""
+    run = db.get(AnalysisRun, analysis_run_id)
+    if run is None:
+        return  # let the service raise its own 404
+    if run.organization_id is None:
+        return  # no org — no restriction
+    org_repo = OrganizationRepo(db)
+    if not org_repo.is_member(run.organization_id, user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not a member of this organization.",
+        )
+
+
 @router.post(
     "/reviews",
     response_model=ReviewResponse,
@@ -43,6 +69,7 @@ router = APIRouter(prefix="/api/v1", tags=["Reviews"])
     ),
     responses={
         201: {"description": "Review created successfully."},
+        403: {"description": "Not a member of the organization."},
         404: {"description": "Analysis run not found."},
         409: {"description": "Analysis run is not in a reviewable state."},
         422: {"description": "Invalid edit target or validation error."},
@@ -54,6 +81,8 @@ def submit_review(
     current_user: CurrentUser = Depends(get_current_user),
 ) -> ReviewResponse:
     """Create a new review on an analysis run."""
+    _enforce_run_membership(db, request.analysis_run_id, current_user.user_id)
+
     try:
         return create_review(db=db, request=request)
 
@@ -94,6 +123,7 @@ def submit_review(
     description="Returns all human reviews attached to a given analysis run.",
     responses={
         200: {"description": "Reviews returned."},
+        403: {"description": "Not a member of the organization."},
         404: {"description": "Analysis run not found."},
     },
 )
@@ -103,6 +133,8 @@ def list_reviews(
     current_user: CurrentUser = Depends(get_current_user),
 ) -> list[ReviewResponse]:
     """Return all reviews for a specific analysis run."""
+    _enforce_run_membership(db, analysis_run_id, current_user.user_id)
+
     try:
         return get_reviews_for_run(db=db, analysis_run_id=analysis_run_id)
 

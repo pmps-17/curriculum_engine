@@ -48,6 +48,7 @@ class AnalysisRunRepo:
         ontology_version_id: uuid.UUID,
         triggered_by: str | None = None,
         organization_id: uuid.UUID | None = None,
+        curriculum_set_id: uuid.UUID | None = None,
     ) -> AnalysisRun:
         """Insert a new analysis run in ``RUNNING`` state."""
         run = AnalysisRun(
@@ -56,6 +57,7 @@ class AnalysisRunRepo:
             status=AnalysisRunStatus.RUNNING,
             triggered_by=triggered_by,
             organization_id=organization_id,
+            curriculum_set_id=curriculum_set_id,
         )
         self._db.add(run)
         self._db.flush()

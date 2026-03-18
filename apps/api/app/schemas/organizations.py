@@ -8,20 +8,73 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import EmailStr, Field
 
 from app.schemas.base import CamelModel
+
+
+# ── Shared optional profile fields ───────────────────────────────────
+
+
+class _OrganizationProfileMixin(CamelModel):
+    """Optional contact + location fields shared across create/update."""
+
+    contact_name: str | None = Field(
+        default=None, max_length=255,
+        description="Primary contact person.",
+    )
+    contact_email: EmailStr | None = Field(
+        default=None,
+        description="Contact email (validated format).",
+    )
+    country_name: str | None = Field(
+        default=None, max_length=100,
+        description="Full country name (e.g. 'United States').",
+    )
+    country_code: str | None = Field(
+        default=None, max_length=10,
+        description="ISO-2 country code (e.g. 'US').",
+    )
+    state_name: str | None = Field(
+        default=None, max_length=100,
+        description="Full state / province name (e.g. 'California').",
+    )
+    state_code: str | None = Field(
+        default=None, max_length=10,
+        description="State / region code (e.g. 'CA').",
+    )
+    city: str | None = Field(
+        default=None, max_length=100,
+        description="City name.",
+    )
 
 
 # ── Requests ─────────────────────────────────────────────────────────
 
 
-class OrganizationCreateRequest(CamelModel):
+class OrganizationCreateRequest(_OrganizationProfileMixin):
     """Body for ``POST /api/v1/organizations``."""
 
     name: str = Field(
         min_length=1, max_length=255,
         description="Human-readable organization name.",
+    )
+    description: str | None = Field(
+        default=None, max_length=1000,
+        description="Optional short description of the organization.",
+    )
+
+
+class OrganizationUpdateRequest(_OrganizationProfileMixin):
+    """Body for ``PATCH /api/v1/organizations/{id}``."""
+
+    name: str | None = Field(
+        default=None, min_length=1, max_length=255,
+        description="Updated organization name.",
+    )
+    description: str | None = Field(
+        default=None, max_length=1000,
+        description="Updated description (send null to clear).",
     )
 
 
@@ -42,11 +95,26 @@ class OrganizationOut(CamelModel):
 
     organization_id: UUID = Field(description="Organization identifier.")
     name: str = Field(description="Organization display name.")
+    description: str | None = Field(
+        default=None,
+        description="Optional short description.",
+    )
     invite_code: str | None = Field(
         default=None,
         description="Invite code (included only when the user is the owner).",
     )
     created_at: datetime = Field(description="When the organization was created.")
+
+    # ── Contact ──────────────────────────────────────────────────────
+    contact_name: str | None = Field(default=None, description="Primary contact person.")
+    contact_email: str | None = Field(default=None, description="Contact email.")
+
+    # ── Location ─────────────────────────────────────────────────────
+    country_name: str | None = Field(default=None, description="Full country name.")
+    country_code: str | None = Field(default=None, description="ISO-2 country code.")
+    state_name: str | None = Field(default=None, description="Full state / province name.")
+    state_code: str | None = Field(default=None, description="State / region code.")
+    city: str | None = Field(default=None, description="City name.")
 
 
 class OrganizationJoinOut(CamelModel):

@@ -57,12 +57,24 @@ class Organization(TimestampMixin, Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     invite_code: Mapped[str] = mapped_column(
         String(12), unique=True, nullable=False
     )
     owner_user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
     )
+
+    # ── Contact ──────────────────────────────────────────────────────
+    contact_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    contact_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+
+    # ── Location ─────────────────────────────────────────────────────
+    country_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    country_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    state_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    state_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    city: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     # relationships
     owner: Mapped["User"] = relationship(back_populates="owned_organizations")

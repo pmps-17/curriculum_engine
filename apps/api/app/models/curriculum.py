@@ -99,6 +99,9 @@ class Document(TimestampMixin, Base):
     file_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     parse_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    curriculum_set_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("curriculum_sets.id"), nullable=True
+    )
 
     # relationships
     upload_batch: Mapped["UploadBatch"] = relationship(back_populates="documents")

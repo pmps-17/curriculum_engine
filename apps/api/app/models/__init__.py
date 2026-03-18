@@ -55,6 +55,9 @@ from app.models.organization import (  # noqa: F401
     OrganizationMember,
 )
 
+# ── Curriculum Sets (Library unit) ───────────────────────────────────
+from app.models.curriculum_set import CurriculumSet  # noqa: F401
+
 # ── Review / audit ───────────────────────────────────────────────────
 from app.models.review import (  # noqa: F401
     AuditLog,

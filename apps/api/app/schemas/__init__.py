@@ -39,4 +39,5 @@ from app.schemas.organizations import (  # noqa: F401
     OrganizationJoinOut,
     OrganizationJoinRequest,
     OrganizationOut,
+    OrganizationUpdateRequest,
 )

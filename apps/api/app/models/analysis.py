@@ -44,6 +44,9 @@ class AnalysisRun(TimestampMixin, Base):
     organization_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True
     )
+    curriculum_set_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("curriculum_sets.id"), nullable=True
+    )
     status: Mapped[AnalysisRunStatus] = mapped_column(
         String(30), default=AnalysisRunStatus.PENDING, nullable=False
     )

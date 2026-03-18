@@ -34,6 +34,7 @@ class DocumentRepo:
         status: str = DocumentStatus.UPLOADED.value,
         organization_id: Optional[uuid.UUID] = None,
         document_id: Optional[uuid.UUID] = None,
+        curriculum_set_id: Optional[uuid.UUID] = None,
     ) -> Document:
         """
         Create a document record in the database.
@@ -61,6 +62,7 @@ class DocumentRepo:
             raw_text=extracted_text,
             status=status,
             organization_id=organization_id,
+            curriculum_set_id=curriculum_set_id,
         )
         if document_id is not None:
             kwargs["id"] = document_id
@@ -130,6 +132,7 @@ class DocumentRepo:
         grade_band: Optional[str] = None,
         organization_id: Optional[uuid.UUID] = None,
         document_id: Optional[uuid.UUID] = None,
+        curriculum_set_id: Optional[uuid.UUID] = None,
     ) -> tuple[UploadBatch, Document]:
         """
         Create an upload batch and document in one transaction.
@@ -189,6 +192,7 @@ class DocumentRepo:
             extracted_text=extracted_text,
             organization_id=organization_id,
             document_id=document_id,
+            curriculum_set_id=curriculum_set_id,
         )
 
         return batch, doc

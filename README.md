@@ -1,48 +1,63 @@
 # Curriculum Engine
 
-> Research-grade curriculum governance and pillar-mapping engine — automatically analyzes school curriculum documents against a skills ontology, scores alignment, and provides evidence-based findings.
+> Automated curriculum governance engine — analyzes school curriculum documents against a skills ontology, scores alignment across pillars, and produces evidence-based findings.
 
 ---
 
-## What It Does
+## High-Level Architecture
 
-Schools upload curriculum documents (scope & sequence, unit plans, assessments, etc.). The engine:
+```
+Users ──▶ Organizations ──▶ Curriculum Sets ──▶ Documents ──▶ Analysis Reports
+```
 
-1. **Normalizes** the document into structured sections (objectives, activities, assessments…).
-2. **Checks intake compliance** — rejects documents that are too short, empty, or lack substance.
-3. **Chunks** sections into analysis-ready text segments.
-4. **Matches** chunks against ontology skills using **semantic embeddings** (with keyword fallback).
-5. **Scores** each skill on a 0–1 scale with section-type weighting (assessments worth more than plain content).
-6. **Builds evidence** — extracts the top supporting text snippets for each skill score.
-7. **Produces findings** — pillar-level and skill-level scores with confidence levels and taught/assessed flags.
-8. **Supports human review** — reviewers can override scores with justifications, all changes are audit-logged.
+| Concept             | Description                                                       |
+|---------------------|-------------------------------------------------------------------|
+| **User**            | Authenticated person (Google OAuth or dev header).                |
+| **Organization**    | Tenant boundary. Users create or join via invite code.            |
+| **Curriculum Set**  | A logical grouping of documents (e.g. "Grade 5 Science").        |
+| **Document**        | An uploaded file (PDF, Word, etc.) with extracted text.           |
+| **Analysis Report** | Pillar scores, skill scores, evidence snippets, and findings.     |
 
-### Pillars Analyzed
+### Backend Layers
 
-| Code | Pillar |
-|------|--------|
-| P1   | — |
-| P2   | — |
-| P3   | — |
+```
+Router (thin)  →  Service (thick)  →  Repository (thin)  →  Database
+```
+
+- **Routers** parse HTTP, call services, map exceptions to status codes.
+- **Services** own business logic and transactions (`commit()`).
+- **Repositories** wrap SQLAlchemy — `flush()` only, never `commit()`.
+
+### Auth Flow
+
+```
+Browser ─── Google OAuth ───▶ NextAuth (server-side)
+                                    │
+                              Next.js API proxy routes
+                              (inject auth headers)
+                                    │
+                                    ▼
+                           FastAPI get_current_user()
+                            ├─ google_jwt: verify ID token via JWKS
+                            └─ dev_header: trust X-User-Email header
+```
 
 ---
 
 ## Tech Stack
 
-| Layer              | Technology                                |
-|--------------------|-------------------------------------------|
-| **API Framework**  | FastAPI 0.100+                            |
-| **ORM**            | SQLAlchemy 2.0 (`mapped_column`)          |
-| **Migrations**     | Alembic                                   |
-| **Database**       | PostgreSQL 16 + pgvector                  |
-| **Embeddings**     | sentence-transformers (local) or OpenAI   |
-| **Validation**     | Pydantic v2 + pydantic-settings           |
-| **Runtime**        | Python 3.12+                              |
-| **Frontend**       | Next.js 16 + TypeScript + TanStack Query  |
-| **Auth (frontend)**| NextAuth v5 (Auth.js) — Google provider   |
-| **Auth (backend)** | Dual-mode: Google JWT / dev_header        |
-| **Styling**        | Tailwind CSS                              |
-| **Containerization** | Docker Compose                          |
+| Layer             | Technology                                      |
+|-------------------|-------------------------------------------------|
+| **API**           | FastAPI · Python 3.12+                          |
+| **ORM**           | SQLAlchemy 2.0 (`mapped_column`)                |
+| **Migrations**    | Alembic (0001 → 0007)                           |
+| **Database**      | PostgreSQL 16 + pgvector                        |
+| **Embeddings**    | sentence-transformers (local) or OpenAI         |
+| **Frontend**      | Next.js 16 · TypeScript · Tailwind CSS          |
+| **State**         | TanStack Query (server) · localStorage (org)    |
+| **Auth (web)**    | NextAuth v5 (Auth.js) — Google provider         |
+| **Auth (API)**    | Dual-mode: `google_jwt` / `dev_header`          |
+| **Container**     | Docker Compose (PostgreSQL only)                |
 
 ---
 
@@ -51,122 +66,37 @@ Schools upload curriculum documents (scope & sequence, unit plans, assessments, 
 ```
 my-curriculum-engine/
 ├── docker-compose.yml              # PostgreSQL 16 + pgvector (port 5433)
-├── README.md
-├── AUDIT.md                        # Architecture audit report
+├── setup_ontology.sh               # Convenience: seed ontology data
 ├── apps/
 │   ├── api/                        # FastAPI backend
 │   │   ├── .env                    # Local env vars (not committed)
 │   │   ├── requirements.txt
-│   │   ├── alembic.ini
-│   │   ├── alembic/                # Database migrations (0001 → 0004)
-│   │   ├── storage/                # On-disk file uploads (gitignored)
+│   │   ├── alembic/                # Migrations (0001 → 0007)
 │   │   └── app/
-│   │       ├── main.py             # FastAPI entry point (8 routers)
-│   │       ├── core/
-│   │       │   ├── config.py       # pydantic-settings (AUTH_MODE, DB, embeddings)
-│   │       │   ├── db.py           # Engine, SessionLocal, Base
-│   │       │   ├── auth.py         # get_current_user (dual-mode: JWT / header)
-│   │       │   ├── security.py     # Google JWKS verification
-│   │       │   └── dependencies.py # Embedding provider + vector store DI
+│   │       ├── main.py             # Entry point (9 routers)
+│   │       ├── core/               # config, db, auth, dependencies
 │   │       ├── models/             # SQLAlchemy ORM models
-│   │       │   ├── curriculum.py   # School, Document, Section, Chunk
-│   │       │   ├── ontology.py     # OntologyVersion, Pillar, Skill, Indicator
-│   │       │   ├── analysis.py     # AnalysisRun, CandidateMatch, SkillScore
-│   │       │   ├── compliance.py   # IntakeComplianceResult
-│   │       │   ├── review.py       # Review, ReviewEdit, AuditLog
-│   │       │   ├── workspace.py    # User, Workspace, WorkspaceMember
-│   │       │   ├── embeddings.py   # ChunkEmbedding, SkillEmbedding
-│   │       │   └── enums.py        # ~20 enums
-│   │       ├── schemas/            # Pydantic v2 request/response models
-│   │       ├── repositories/       # Thin data-access layer (flush, never commit)
-│   │       ├── services/           # Business logic (thick orchestrator pattern)
-│   │       ├── routers/            # Thin HTTP layer (8 routers)
-│   │       ├── adapters/           # Embeddings + vector store adapters
-│   │       └── evaluation/         # Evaluation harness (gold datasets)
+│   │       ├── schemas/            # Pydantic v2 request/response
+│   │       ├── repositories/       # Data-access (flush, never commit)
+│   │       ├── services/           # Business logic + orchestration
+│   │       ├── routers/            # Thin HTTP layer
+│   │       └── adapters/           # Embeddings + vector store
 │   └── web/                        # Next.js 16 frontend
-│       ├── app/                    # Pages + API proxy routes
-│       │   ├── layout.tsx          # Root layout (AppShell, providers)
-│       │   ├── page.tsx            # Dashboard
-│       │   ├── login/              # Login page (Google OAuth)
+│       ├── app/
+│       │   ├── page.tsx            # Redirects to /library
+│       │   ├── login/              # Google OAuth login
+│       │   ├── organizations/      # Org management page
+│       │   ├── library/            # Curriculum Sets list
+│       │   ├── library/[setId]/    # Set detail + Upload & Analyze
 │       │   ├── results/[id]/       # Analysis results page
 │       │   ├── compare/            # Side-by-side comparison
 │       │   └── api/                # Proxy routes → backend
-│       ├── components/             # React components
-│       │   ├── AnalyzeForm.tsx     # Upload + analyze form
-│       │   ├── WorkspaceGate.tsx   # Workspace onboarding gate
-│       │   ├── AppShell.tsx        # Conditional nav layout
-│       │   └── ...                 # PillarCards, EvidenceAccordion, etc.
+│       ├── components/             # AnalyzeForm, CurriculumSetCard, etc.
 │       ├── features/               # Feature-specific hooks
-│       └── lib/                    # api, auth, config, schemas
-├── packages/
-│   ├── ontology/v1.0/              # pillars.json, skills.json, indicators.json
-│   └── shared/                     # (placeholder)
-└── docker/                         # (placeholder)
+│       └── lib/                    # api, auth, config, schemas, orgStore
+└── packages/
+    └── ontology/v1.0/              # pillars.json, skills.json, indicators.json
 ```
-
----
-
-## Architecture
-
-```
-Router (thin)  →  Service (thick)  →  Repository (thin)  →  Database
-```
-
-- **Routers** handle HTTP concerns: parse requests, call services, map domain exceptions to HTTP status codes.
-- **Services** contain all business logic. Pure services (normalization, scoring, evidence) have zero DB dependencies. The `analyze_service` orchestrator owns the transaction.
-- **Repositories** are a thin wrapper over SQLAlchemy — `flush()` but never `commit()` (the orchestrator commits).
-
-### Auth Flow
-
-```
-Browser  ──Google OAuth──▶  NextAuth (server-side)
-                                  │
-                                  ▼
-                         Next.js proxy routes
-                          (inject X-User-Email)
-                                  │
-                                  ▼
-                        FastAPI  get_current_user()
-                         ┌─ google_jwt: verify Google ID token via JWKS
-                         └─ dev_header: trust X-User-Email header
-```
-
-**Auth modes** (set via `AUTH_MODE` env var):
-
-| Mode | Use Case | How It Works |
-|------|----------|--------------|
-| `dev_header` (default) | Local development | Trusts `X-User-Email` header |
-| `google_jwt` | Production | Verifies Google ID token via JWKS endpoint |
-
-### Workspace Tenancy
-
-Users belong to **workspaces**. Each workspace has an invite code. Documents and analysis runs are scoped to a workspace.
-
-```
-User → creates workspace → gets invite code → shares with team
-User → joins workspace → can see docs & analyses in that workspace
-```
-
----
-
-## API Endpoints
-
-| Method | Path | Auth | Description |
-|--------|------|:----:|-------------|
-| `GET` | `/health` | — | Liveness check |
-| `GET` | `/health/db` | — | Readiness check (DB connectivity) |
-| `POST` | `/api/v1/analyze` | ✅ | Run full curriculum analysis |
-| `GET` | `/api/v1/results/{analysis_run_id}` | ✅ | Retrieve analysis results |
-| `POST` | `/api/v1/uploads` | ✅ | Upload a curriculum document |
-| `GET` | `/api/v1/documents/{id}` | ✅ | Document metadata (no text) |
-| `GET` | `/api/v1/documents/{id}/preview` | ✅ | Truncated text preview |
-| `GET` | `/api/v1/documents/{id}/download` | ✅ | Stream original file |
-| `POST` | `/api/v1/reviews` | ✅ | Submit a human review |
-| `GET` | `/api/v1/reviews/{analysis_run_id}` | ✅ | List reviews for an analysis run |
-| `GET` | `/api/v1/analysis-runs` | ✅ | List analysis runs for a workspace |
-| `POST` | `/api/v1/workspaces` | ✅ | Create a workspace |
-| `POST` | `/api/v1/workspaces/join` | ✅ | Join via invite code |
-| `GET` | `/api/v1/workspaces` | ✅ | List user's workspaces |
 
 ---
 
@@ -174,9 +104,9 @@ User → joins workspace → can see docs & analyses in that workspace
 
 ### Prerequisites
 
-- Python 3.12+ (recommend miniforge / pyenv)
-- Node.js 20+
-- Docker & Docker Compose
+- **Python 3.12+** (miniforge, pyenv, or system)
+- **Node.js 20+**
+- **Docker & Docker Compose**
 
 ### 1. Start the database
 
@@ -184,16 +114,18 @@ User → joins workspace → can see docs & analyses in that workspace
 docker compose up -d
 ```
 
-This starts PostgreSQL 16 with pgvector on **port 5433** (host) → 5432 (container).
+PostgreSQL 16 + pgvector on **host port 5433** → container port 5432.
 
 ### 2. Set up the backend
 
 ```bash
 cd apps/api
 python -m venv .venv
-source .venv/bin/activate    # macOS / Linux
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+> Or with conda: `conda create -n curriculum-engine python=3.12 && conda activate curriculum-engine && pip install -r requirements.txt`
 
 ### 3. Configure backend environment
 
@@ -206,14 +138,7 @@ AUTH_MODE=dev_header
 EMBEDDING_PROVIDER=local
 ```
 
-For production auth, set:
-
-```env
-AUTH_MODE=google_jwt
-GOOGLE_CLIENT_ID=<your-google-client-id>
-```
-
-### 4. Run database migrations
+### 4. Run migrations
 
 ```bash
 cd apps/api
@@ -227,20 +152,20 @@ cd apps/api
 python -m app.services.seed_ontology_v1
 ```
 
-Or use the convenience script from repo root:
-
-```bash
-./setup_ontology.sh
-```
+This loads `packages/ontology/v1.0/{pillars,skills,indicators}.json` into the database and creates an active ontology version.
 
 ### 6. Start the backend
 
 ```bash
 cd apps/api
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-API: **http://localhost:8000** • Docs: **http://localhost:8000/docs**
+- API: **http://localhost:8000**
+- Docs: **http://localhost:8000/docs**
+
+> ⚠️ Avoid `--reload` if it picks up the wrong Python. Use the explicit path if needed:
+> `/path/to/envs/curriculum-engine/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000`
 
 ### 7. Set up the frontend
 
@@ -253,12 +178,12 @@ Create `apps/web/.env.local`:
 
 ```env
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
-AUTH_SECRET=<random-32-char-string>
+AUTH_SECRET=any-random-32-char-string-for-dev
 AUTH_GOOGLE_ID=<your-google-client-id>
 AUTH_GOOGLE_SECRET=<your-google-client-secret>
 ```
 
-For local dev without Google OAuth, the backend `dev_header` mode works with any email.
+For **local dev without Google OAuth**, the backend `dev_header` mode trusts any email — Google credentials are only needed for production.
 
 ### 8. Start the frontend
 
@@ -271,40 +196,172 @@ Frontend: **http://localhost:3000**
 
 ---
 
+## API Endpoints
+
+### System
+
+| Method | Path | Auth | Description |
+|--------|------|:----:|-------------|
+| `GET`  | `/health` | — | Liveness probe |
+| `GET`  | `/health/db` | — | Readiness probe (DB) |
+| `GET`  | `/health/auth` | — | Auth mode info |
+
+### Organizations
+
+| Method | Path | Auth | Description |
+|--------|------|:----:|-------------|
+| `GET`  | `/api/v1/organizations` | ✅ | List user's organizations |
+| `POST` | `/api/v1/organizations` | ✅ | Create an organization |
+| `POST` | `/api/v1/organizations/join` | ✅ | Join via invite code |
+| `PATCH`| `/api/v1/organizations/{id}` | ✅ | Update org name/description |
+| `POST` | `/api/v1/organizations/{id}/leave` | ✅ | Leave an organization |
+
+### Curriculum Sets
+
+| Method   | Path | Auth | Description |
+|----------|------|:----:|-------------|
+| `GET`    | `/api/v1/curriculum-sets?organization_id=` | ✅ | List sets for org |
+| `POST`   | `/api/v1/curriculum-sets` | ✅ | Create a set |
+| `PATCH`  | `/api/v1/curriculum-sets/{id}` | ✅ | Update title/subject/etc. |
+| `DELETE` | `/api/v1/curriculum-sets/{id}` | ✅ | Delete a set |
+
+### Documents & Uploads
+
+| Method | Path | Auth | Description |
+|--------|------|:----:|-------------|
+| `POST` | `/api/v1/uploads` | ✅ | Upload file (multipart, optional `curriculum_set_id`) |
+| `GET`  | `/api/v1/documents/{id}` | ✅ | Document metadata |
+| `GET`  | `/api/v1/documents/{id}/preview` | ✅ | Truncated text preview |
+| `GET`  | `/api/v1/documents/{id}/download` | ✅ | Stream original file |
+
+### Analysis
+
+| Method | Path | Auth | Description |
+|--------|------|:----:|-------------|
+| `POST` | `/api/v1/analyze` | ✅ | Run analysis (`document_id` or `curriculum_text`, optional `curriculum_set_id`) |
+| `GET`  | `/api/v1/results/{analysis_run_id}` | ✅ | Full analysis results |
+| `GET`  | `/api/v1/analysis-runs` | ✅ | List runs for an organization |
+
+### Reviews
+
+| Method | Path | Auth | Description |
+|--------|------|:----:|-------------|
+| `POST` | `/api/v1/reviews` | ✅ | Submit a human review |
+| `GET`  | `/api/v1/reviews/{analysis_run_id}` | ✅ | List reviews for a run |
+
+---
+
+## Key API Flows
+
+### 1. Create / Join an Organization
+
+```bash
+# Create
+curl -X POST http://localhost:8000/api/v1/organizations \
+  -H "X-User-Email: alice@example.com" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Acme School District"}'
+
+# Join (using the invite_code from the create response)
+curl -X POST http://localhost:8000/api/v1/organizations/join \
+  -H "X-User-Email: bob@example.com" \
+  -H "Content-Type: application/json" \
+  -d '{"invite_code": "ABC123XY"}'
+```
+
+### 2. Create a Curriculum Set
+
+```bash
+curl -X POST http://localhost:8000/api/v1/curriculum-sets \
+  -H "X-User-Email: alice@example.com" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "organization_id": "<org-uuid>",
+    "title": "Grade 5 Science",
+    "subject": "Science",
+    "grade_band": "3-5"
+  }'
+```
+
+### 3. Upload a File to a Curriculum Set
+
+```bash
+curl -X POST http://localhost:8000/api/v1/uploads \
+  -H "X-User-Email: alice@example.com" \
+  -F "file=@lesson_plan.pdf" \
+  -F "title=Unit 3 Lesson Plan" \
+  -F "subject=Science" \
+  -F "grade_band=3-5" \
+  -F "organization_id=<org-uuid>" \
+  -F "curriculum_set_id=<set-uuid>"
+```
+
+### 4. Analyze (by document or by text)
+
+```bash
+# By uploaded document
+curl -X POST http://localhost:8000/api/v1/analyze \
+  -H "X-User-Email: alice@example.com" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "document_id": "<document-uuid>",
+    "title": "Unit 3 Lesson Plan",
+    "subject": "Science",
+    "grade_band": "3-5",
+    "organization_id": "<org-uuid>",
+    "curriculum_set_id": "<set-uuid>"
+  }'
+
+# By pasted text
+curl -X POST http://localhost:8000/api/v1/analyze \
+  -H "X-User-Email: alice@example.com" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "curriculum_text": "Students will explore the water cycle...",
+    "title": "Water Cycle Lesson",
+    "subject": "Science",
+    "grade_band": "3-5",
+    "organization_id": "<org-uuid>"
+  }'
+```
+
+### 5. View Results
+
+```bash
+curl http://localhost:8000/api/v1/results/<analysis_run_id> \
+  -H "X-User-Email: alice@example.com"
+```
+
+Returns pillar scores, skill scores, evidence snippets, findings, and compliance status.
+
+---
+
 ## Analysis Pipeline
 
 ```
 Document Text / Uploaded File
          │
          ▼
-┌─────────────────────────┐
-│ 1. Normalize             │  → Split into sections, classify types
-└──────────┬──────────────┘
-           ▼
-┌─────────────────────────┐
-│ 2. Intake Compliance     │  → Reject if too short / empty / no substance
-└──────────┬──────────────┘
-           ▼
-┌─────────────────────────┐
-│ 3. Chunk                 │  → Break sections into ~1500-char segments
-└──────────┬──────────────┘
-           ▼
-┌─────────────────────────┐
-│ 4. Semantic Matching     │  → Embed chunks, cosine-match to skill embeddings
-│    (keyword fallback)    │  → If embeddings fail, fall back to keyword matching
-└──────────┬──────────────┘
-           ▼
-┌─────────────────────────┐
-│ 5. Score                 │  → Weighted scoring per skill (0–1 scale)
-└──────────┬──────────────┘
-           ▼
-┌─────────────────────────┐
-│ 6. Evidence              │  → Extract top-5 supporting snippets per skill
-└──────────┬──────────────┘
-           ▼
-┌─────────────────────────┐
-│ 7. Persist & Return      │  → Save all results, return response
-└─────────────────────────┘
+  1. Normalize         →  Split into sections, classify types
+         │
+         ▼
+  2. Intake Compliance →  Reject if too short / empty / no substance
+         │
+         ▼
+  3. Chunk             →  Break sections into ~1500-char segments
+         │
+         ▼
+  4. Semantic Match    →  Embed chunks, cosine-match to skill embeddings
+     (keyword fallback)    If embeddings unavailable, fall back to keywords
+         │
+         ▼
+  5. Score             →  Weighted scoring per skill (0–1 scale)
+         │
+         ▼
+  6. Evidence          →  Extract top supporting snippets per skill
+         │
+         ▼
+  7. Persist & Return  →  Save all results, return response
 ```
 
 ---
@@ -313,11 +370,15 @@ Document Text / Uploaded File
 
 | Problem | Solution |
 |---------|----------|
-| `connection refused` on port 5432 | This project uses port **5433**. Check `docker compose ps` and your `.env`. |
-| Blank login page | Ensure `WorkspaceGate` / `AppShell` aren't blocking unauthenticated routes. Check browser console. |
-| `EMBEDDING_PROVIDER` errors | Default is `local` (sentence-transformers). Set `EMBEDDING_PROVIDER=openai` + `OPENAI_API_KEY` for OpenAI. |
-| `No active ontology version found` | Run the seeding script: `python -m app.services.seed_ontology_v1` |
-| Google OAuth 401 | Verify `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` in `.env.local` and `GOOGLE_CLIENT_ID` in backend `.env`. Ensure redirect URI matches. |
+| **`invalid_client` (Google OAuth)** | Verify `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` in `apps/web/.env.local`. Check `GOOGLE_CLIENT_ID` in `apps/api/.env`. Ensure the authorized redirect URI in Google Console matches `http://localhost:3000/api/auth/callback/google`. |
+| **DB role / password errors** | The Docker container uses `appuser` / `apppass`. Ensure `DATABASE_URL` in `apps/api/.env` matches: `postgresql://appuser:apppass@localhost:5433/curriculum_engine`. |
+| **Port 5432 conflict** | This project maps to host port **5433**, not 5432. Check `docker compose ps`. If another Postgres is on 5433, stop it or change the port in `docker-compose.yml`. |
+| **Port 8000 / 3000 already in use** | `lsof -ti :8000 \| xargs kill -9` or `lsof -ti :3000 \| xargs kill -9` to free the port. |
+| **`No active ontology version found`** | Ontology not seeded. Run: `cd apps/api && python -m app.services.seed_ontology_v1` |
+| **pgvector extension missing** | Migration 0001 creates it. Run `alembic upgrade head`. If permission error: `docker exec -it curriculum_engine_postgres psql -U appuser -d curriculum_engine -c "CREATE EXTENSION IF NOT EXISTS vector;"` |
+| **`--reload` picks up wrong Python** | Use the explicit interpreter: `/path/to/envs/curriculum-engine/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000` |
+| **`EMBEDDING_PROVIDER` errors** | Default is `local` (sentence-transformers). For OpenAI set `EMBEDDING_PROVIDER=openai` and `OPENAI_API_KEY` in `.env`. |
+| **Blank page / redirect loops** | Ensure an organization is selected in the UI. The app redirects to `/organizations` if none is selected. |
 
 ---
 

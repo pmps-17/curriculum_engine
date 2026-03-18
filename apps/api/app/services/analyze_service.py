@@ -385,6 +385,10 @@ def run_analysis(
                 raise OrganizationAccessError(
                     "Document does not belong to this organization.",
                 )
+
+            # Derive curriculum_set_id from the document if not explicitly provided
+            if request.curriculum_set_id is None and doc.curriculum_set_id is not None:
+                request.curriculum_set_id = doc.curriculum_set_id
         else:
             # ── Step 2a: Persist document for curriculum_text submission
             _batch, doc = curriculum_repo.create_upload_batch_and_document(
@@ -392,6 +396,7 @@ def run_analysis(
                 uploaded_by=request.triggered_by,
                 curriculum_text=curriculum_text,
                 organization_id=request.organization_id,
+                curriculum_set_id=request.curriculum_set_id,
             )
 
         # ── Step 3: Normalize ────────────────────────────────────────
@@ -421,6 +426,7 @@ def run_analysis(
             ontology_version_id=ontology_version.id,
             triggered_by=request.triggered_by,
             organization_id=request.organization_id,
+            curriculum_set_id=request.curriculum_set_id,
         )
 
         # ── Step 6: Intake compliance ────────────────────────────────

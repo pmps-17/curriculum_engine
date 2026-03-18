@@ -10,7 +10,7 @@ import secrets
 import string
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.organization import User, Organization, OrganizationMember
@@ -113,3 +113,52 @@ class OrganizationRepo:
         self._db.add(member)
         self._db.flush()
         return member
+
+    def count_members(self, organization_id: uuid.UUID) -> int:
+        """Return the total number of members in an organization."""
+        stmt = (
+            select(func.count())
+            .select_from(OrganizationMember)
+            .where(OrganizationMember.organization_id == organization_id)
+        )
+        return self._db.scalar(stmt) or 0
+
+    def remove_member(
+        self,
+        *,
+        organization_id: uuid.UUID,
+        user_id: uuid.UUID,
+    ) -> bool:
+        """Remove a user from an organization. Returns True if deleted."""
+        stmt = select(OrganizationMember).where(
+            OrganizationMember.organization_id == organization_id,
+            OrganizationMember.user_id == user_id,
+        )
+        member = self._db.scalars(stmt).first()
+        if member is None:
+            return False
+        self._db.delete(member)
+        self._db.flush()
+        return True
+
+    # ── Mutable fields accepted by update() ────────────────────────
+    _MUTABLE_FIELDS: frozenset[str] = frozenset({
+        "name", "description",
+        "contact_name", "contact_email",
+        "country_name", "country_code",
+        "state_name", "state_code",
+        "city",
+    })
+
+    def update(self, org: Organization, **kwargs) -> Organization:
+        """Patch mutable fields on an organization. Flushes but does not commit.
+
+        Only fields listed in ``_MUTABLE_FIELDS`` are accepted.
+        Any ``None`` value explicitly clears the column.
+        """
+        for key, value in kwargs.items():
+            if key not in self._MUTABLE_FIELDS:
+                raise ValueError(f"Field '{key}' is not a mutable organization field.")
+            setattr(org, key, value)
+        self._db.flush()
+        return org
