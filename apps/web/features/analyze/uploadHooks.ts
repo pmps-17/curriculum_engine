@@ -1,51 +1,36 @@
 import { useMutation } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api";
-import { proxyPaths } from "@/lib/config";
+import { uploadDocument, type UploadResponse } from "@/lib/documents";
 
-/* ------------------------------------------------------------------ */
-/*  Response type                                                     */
-/* ------------------------------------------------------------------ */
-
-export interface UploadResponse {
-  document_id: string;
-  filename: string;
-  content_type?: string;
-  size_bytes?: number;
-  extraction_status: "EXTRACTED" | "STORED_ONLY" | "REJECTED";
-  warnings?: string[];
-  preview_text?: string | null;
-  preview_truncated?: boolean | null;
-}
+export type { UploadResponse };
 
 /* ------------------------------------------------------------------ */
 /*  Upload mutation                                                   */
 /* ------------------------------------------------------------------ */
 
+/**
+ * React-Query mutation that wraps {@link uploadDocument}.
+ *
+ * Accepts a `FormData` with a `file` entry (and optionally
+ * `title`, `subject`, `grade_band`).  The `organization_id` is
+ * read from `localStorage` and injected automatically.
+ */
 export function useUploadMutation() {
   return useMutation<UploadResponse, ApiError, FormData>({
     mutationFn: async (formData) => {
-      // Inject organization_id for tenancy
       const orgId =
         typeof window !== "undefined"
           ? localStorage.getItem("organization_id") ?? ""
           : "";
 
-      if (orgId) formData.append("organization_id", orgId);
+      const file = formData.get("file") as File | null;
+      if (!file) throw new ApiError(400, { detail: "No file provided." });
 
-      const res = await fetch(proxyPaths.uploads, {
-        method: "POST",
-        // Do NOT set Content-Type — browser will add the correct
-        // multipart boundary automatically.
-        // Auth is handled server-side by the proxy route (NextAuth session).
-        body: formData,
+      return uploadDocument(orgId, file, {
+        title: (formData.get("title") as string) || undefined,
+        subject: (formData.get("subject") as string) || undefined,
+        grade_band: (formData.get("grade_band") as string) || undefined,
       });
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new ApiError(res.status, body);
-      }
-
-      return res.json() as Promise<UploadResponse>;
     },
   });
 }

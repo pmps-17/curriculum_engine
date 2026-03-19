@@ -1,19 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
-import { getOrgId, clearOrg } from "@/lib/orgStore";
+import { clearOrg } from "@/lib/orgStore";
 
 /* ------------------------------------------------------------------ */
 /*  Nav items                                                         */
 /* ------------------------------------------------------------------ */
 
 const NAV_ITEMS = [
-  { href: "/organizations", label: "Organizations", requiresOrg: false },
-  { href: "/library",       label: "Library",       requiresOrg: true },
-  { href: "/compare",       label: "Compare",       requiresOrg: true },
+  { href: "/organizations", label: "Organizations" },
+  { href: "/compare",       label: "Compare" },
 ] as const;
 
 /* ------------------------------------------------------------------ */
@@ -25,31 +23,12 @@ export default function TopNav() {
   const { data: session } = useSession();
   const email = session?.user?.email ?? "";
 
-  const [hasOrg, setHasOrg] = useState(false);
-
-  useEffect(() => {
-    setHasOrg(!!getOrgId());
-  }, []);
-
-  // Listen for org changes (e.g. from /organizations page selecting one)
-  useEffect(() => {
-    function onStorage(e: StorageEvent) {
-      if (e.key === "organization_name") {
-        setHasOrg(!!getOrgId());
-      }
-    }
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
-
   function handleLogout() {
     clearOrg();
     signOut({ callbackUrl: "/login" });
   }
 
   function isActive(href: string) {
-    if (href === "/organizations") return pathname.startsWith("/organizations");
-    if (href === "/library") return pathname === "/" || pathname.startsWith("/library");
     return pathname.startsWith(href);
   }
 
@@ -60,7 +39,7 @@ export default function TopNav() {
         <div className="flex items-center gap-1">
           {/* Logo */}
           <Link
-            href="/library"
+            href="/organizations"
             className="mr-4 flex items-center gap-1.5 text-sm font-bold text-gray-900"
           >
             <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#4F46E5] text-[11px] font-black text-white">
@@ -72,21 +51,8 @@ export default function TopNav() {
           </Link>
 
           {/* Nav links */}
-          {NAV_ITEMS.map(({ href, label, requiresOrg }) => {
-            const disabled = requiresOrg && !hasOrg;
+          {NAV_ITEMS.map(({ href, label }) => {
             const active = isActive(href);
-
-            if (disabled) {
-              return (
-                <span
-                  key={href}
-                  className="relative rounded-md px-3 py-1.5 text-[13px] font-medium text-gray-300 cursor-default"
-                  title="Select an organization first"
-                >
-                  {label}
-                </span>
-              );
-            }
 
             return (
               <Link

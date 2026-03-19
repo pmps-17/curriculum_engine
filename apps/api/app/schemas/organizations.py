@@ -105,6 +105,16 @@ class OrganizationOut(CamelModel):
     )
     created_at: datetime = Field(description="When the organization was created.")
 
+    # ── Permissions ──────────────────────────────────────────────────
+    is_admin: bool = Field(
+        default=False,
+        description="True when the current user is the org creator/owner.",
+    )
+    member_count: int = Field(
+        default=0,
+        description="Total number of members in this organization.",
+    )
+
     # ── Contact ──────────────────────────────────────────────────────
     contact_name: str | None = Field(default=None, description="Primary contact person.")
     contact_email: str | None = Field(default=None, description="Contact email.")
@@ -122,3 +132,16 @@ class OrganizationJoinOut(CamelModel):
 
     organization_id: UUID = Field(description="Organization identifier.")
     name: str = Field(description="Organization display name.")
+
+
+# ── Member response ──────────────────────────────────────────────────
+
+
+class MemberOut(CamelModel):
+    """A single organization member."""
+
+    user_id: UUID = Field(description="User identifier.")
+    email: str = Field(description="User email address.")
+    name: str | None = Field(default=None, description="User display name.")
+    role: str = Field(description="'admin' for the org owner, 'member' otherwise.")
+    joined_at: datetime = Field(description="When the user joined the organization.")

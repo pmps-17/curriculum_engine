@@ -9,8 +9,9 @@ from __future__ import annotations
 import secrets
 import string
 import uuid
+from typing import Sequence
 
-from sqlalchemy import func, select
+from sqlalchemy import Row, delete as sa_delete, func, select
 from sqlalchemy.orm import Session
 
 from app.models.organization import User, Organization, OrganizationMember
@@ -162,3 +163,82 @@ class OrganizationRepo:
             setattr(org, key, value)
         self._db.flush()
         return org
+
+    # ── Member counts (batch) ────────────────────────────────────────
+
+    def member_counts_for_orgs(
+        self, organization_ids: Sequence[uuid.UUID],
+    ) -> dict[uuid.UUID, int]:
+        """Return {org_id: member_count} for a list of org ids."""
+        if not organization_ids:
+            return {}
+        stmt = (
+            select(
+                OrganizationMember.organization_id,
+                func.count().label("cnt"),
+            )
+            .where(OrganizationMember.organization_id.in_(organization_ids))
+            .group_by(OrganizationMember.organization_id)
+        )
+        rows: Sequence[Row] = self._db.execute(stmt).all()
+        return {row[0]: row[1] for row in rows}
+
+    # ── List members ─────────────────────────────────────────────────
+
+    def list_members(
+        self, organization_id: uuid.UUID,
+    ) -> list[tuple[User, OrganizationMember]]:
+        """Return (User, OrganizationMember) pairs for an organization."""
+        stmt = (
+            select(User, OrganizationMember)
+            .join(OrganizationMember, OrganizationMember.user_id == User.id)
+            .where(OrganizationMember.organization_id == organization_id)
+            .order_by(OrganizationMember.created_at.asc())
+        )
+        return list(self._db.execute(stmt).all())
+
+    # ── Delete organization ──────────────────────────────────────────
+
+    def delete_organization(self, organization_id: uuid.UUID) -> None:
+        """Hard-delete an organization and clean up all FK references.
+
+        - Nullifies ``organization_id`` on documents and analysis_runs
+          (both columns are nullable).
+        - Deletes curriculum_sets rows (non-nullable FK).
+        - Deletes memberships.
+        - Deletes the organization row.
+        """
+        from app.models.analysis import AnalysisRun
+        from app.models.curriculum import Document
+        from app.models.curriculum_set import CurriculumSet
+
+        # Nullify org FK on documents and analysis_runs
+        self._db.execute(
+            Document.__table__.update()
+            .where(Document.organization_id == organization_id)
+            .values(organization_id=None)
+        )
+        self._db.execute(
+            AnalysisRun.__table__.update()
+            .where(AnalysisRun.organization_id == organization_id)
+            .values(organization_id=None)
+        )
+
+        # Delete curriculum_sets (non-nullable FK)
+        self._db.execute(
+            sa_delete(CurriculumSet)
+            .where(CurriculumSet.organization_id == organization_id)
+        )
+
+        # Delete memberships
+        self._db.execute(
+            sa_delete(OrganizationMember)
+            .where(OrganizationMember.organization_id == organization_id)
+        )
+
+        # Delete the organization itself
+        self._db.execute(
+            sa_delete(Organization)
+            .where(Organization.id == organization_id)
+        )
+        self._db.flush()

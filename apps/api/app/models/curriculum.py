@@ -7,8 +7,9 @@ artifacts linked to curriculum items.
 """
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -101,6 +102,16 @@ class Document(TimestampMixin, Base):
     parse_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     curriculum_set_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("curriculum_sets.id"), nullable=True
+    )
+
+    # ── User-facing metadata (populated by uploads / PATCH) ──────────
+    title: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    subject: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    grade_band: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    # ── Soft-delete ──────────────────────────────────────────────────
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None,
     )
 
     # relationships

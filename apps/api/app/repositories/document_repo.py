@@ -1,13 +1,15 @@
 """Document repository for managing document records."""
 
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.orm import Session
 
-from app.models.curriculum import Document, UploadBatch, School
+from app.models.analysis import AnalysisRun
+from app.models.curriculum import CurriculumItem, Document, UploadBatch, School
 from app.models.enums import DocumentStatus, DocumentType, UploadBatchStatus
 
 # Must match upload_service.STORAGE_DIR
@@ -35,6 +37,9 @@ class DocumentRepo:
         organization_id: Optional[uuid.UUID] = None,
         document_id: Optional[uuid.UUID] = None,
         curriculum_set_id: Optional[uuid.UUID] = None,
+        title: Optional[str] = None,
+        subject: Optional[str] = None,
+        grade_band: Optional[str] = None,
     ) -> Document:
         """
         Create a document record in the database.
@@ -63,6 +68,9 @@ class DocumentRepo:
             status=status,
             organization_id=organization_id,
             curriculum_set_id=curriculum_set_id,
+            title=title,
+            subject=subject,
+            grade_band=grade_band,
         )
         if document_id is not None:
             kwargs["id"] = document_id
@@ -128,6 +136,7 @@ class DocumentRepo:
         size_bytes: int,
         document_type: str,
         extracted_text: Optional[str] = None,
+        title: Optional[str] = None,
         subject: Optional[str] = None,
         grade_band: Optional[str] = None,
         organization_id: Optional[uuid.UUID] = None,
@@ -193,6 +202,9 @@ class DocumentRepo:
             organization_id=organization_id,
             document_id=document_id,
             curriculum_set_id=curriculum_set_id,
+            title=title,
+            subject=subject,
+            grade_band=grade_band,
         )
 
         return batch, doc
@@ -216,3 +228,126 @@ class DocumentRepo:
         """Return the on-disk path for the stored file, or *None*."""
         path = _STORAGE_DIR / f"{document_id}.bin"
         return path if path.is_file() else None
+
+    # ── Library (org-scoped) helpers ─────────────────────────────────
+
+    def list_for_organization(
+        self,
+        organization_id: uuid.UUID,
+        *,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[dict]:
+        """Return document summaries for an organization (newest first).
+
+        Joins through ``curriculum_items`` → ``analysis_runs`` to derive
+        ``latest_analysis_run_id`` and ``latest_analysis_status``.
+
+        Only non-deleted documents are returned.
+        Returns plain dicts — the service maps them into Pydantic models.
+        """
+        from sqlalchemy import func, literal_column
+        from sqlalchemy.orm import aliased
+
+        # Subquery: latest analysis run per document
+        # path: analysis_runs.curriculum_item_id → curriculum_items.document_id
+        latest_run_sq = (
+            select(
+                CurriculumItem.document_id.label("doc_id"),
+                func.max(AnalysisRun.created_at).label("max_created"),
+            )
+            .join(CurriculumItem, CurriculumItem.id == AnalysisRun.curriculum_item_id)
+            .group_by(CurriculumItem.document_id)
+            .subquery("latest_run_sq")
+        )
+
+        # Subquery: get the actual run row for the latest created_at
+        LatestRun = aliased(AnalysisRun, name="lr")
+        LatestCI = aliased(CurriculumItem, name="lci")
+
+        run_detail_sq = (
+            select(
+                LatestCI.document_id.label("doc_id"),
+                LatestRun.id.label("run_id"),
+                LatestRun.status.label("run_status"),
+            )
+            .join(LatestCI, LatestCI.id == LatestRun.curriculum_item_id)
+            .join(
+                latest_run_sq,
+                (LatestCI.document_id == latest_run_sq.c.doc_id)
+                & (LatestRun.created_at == latest_run_sq.c.max_created),
+            )
+            .subquery("run_detail_sq")
+        )
+
+        # Derive extraction_status as a SQL expression
+        extraction_status_expr = case(
+            (Document.raw_text.isnot(None), literal_column("'EXTRACTED'")),
+            (Document.parse_error.isnot(None), literal_column("'REJECTED'")),
+            else_=literal_column("'STORED_ONLY'"),
+        ).label("extraction_status")
+
+        stmt = (
+            select(
+                Document.id.label("document_id"),
+                Document.title,
+                Document.filename,
+                Document.mime_type.label("content_type"),
+                Document.file_size_bytes.label("size_bytes"),
+                extraction_status_expr,
+                Document.subject,
+                Document.grade_band,
+                Document.curriculum_set_id,
+                Document.created_at,
+                run_detail_sq.c.run_id.label("latest_analysis_run_id"),
+                run_detail_sq.c.run_status.label("latest_analysis_status"),
+            )
+            .outerjoin(
+                run_detail_sq,
+                run_detail_sq.c.doc_id == Document.id,
+            )
+            .where(Document.organization_id == organization_id)
+            .where(Document.deleted_at.is_(None))
+            .order_by(Document.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+
+        rows = self.db.execute(stmt).mappings().all()
+        return [dict(r) for r in rows]
+
+    # ── Mutable fields accepted by update() ─────────────────────────
+
+    _MUTABLE_FIELDS: frozenset = frozenset({"title", "subject", "grade_band"})
+
+    def update(self, doc: Document, **kwargs: object) -> Document:
+        """Patch mutable metadata fields on a document. Flushes only."""
+        for key, value in kwargs.items():
+            if key not in self._MUTABLE_FIELDS:
+                raise ValueError(f"Field '{key}' is not a mutable document field.")
+            setattr(doc, key, value)
+        self.db.flush()
+        return doc
+
+    def update_content(
+        self,
+        doc: Document,
+        extracted_text: Optional[str],
+        extraction_status: str,
+        warnings: Optional[list[str]] = None,
+    ) -> Document:
+        """Replace document content (raw_text) and update status. Flushes only."""
+        doc.raw_text = extracted_text
+        doc.status = (
+            DocumentStatus.PROCESSED
+            if extraction_status == "EXTRACTED"
+            else DocumentStatus.UPLOADED
+        )
+        doc.parse_error = "; ".join(warnings) if warnings else None
+        self.db.flush()
+        return doc
+
+    def soft_delete(self, doc: Document) -> None:
+        """Set ``deleted_at`` to now. Flushes but does not commit."""
+        doc.deleted_at = datetime.now(timezone.utc)
+        self.db.flush()

@@ -1,11 +1,13 @@
 """Organizations router — thin layer over organization_service.
 
 Provides:
-- ``GET    /api/v1/organizations``            — list caller's orgs
-- ``POST   /api/v1/organizations``            — create a new org
-- ``POST   /api/v1/organizations/join``       — join via invite code
-- ``PATCH  /api/v1/organizations/{id}``       — edit org details
-- ``POST   /api/v1/organizations/{id}/leave`` — leave the org
+- ``GET    /api/v1/organizations``              — list caller's orgs
+- ``POST   /api/v1/organizations``              — create a new org
+- ``POST   /api/v1/organizations/join``         — join via invite code
+- ``PATCH  /api/v1/organizations/{id}``         — edit org details
+- ``POST   /api/v1/organizations/{id}/leave``   — leave the org
+- ``GET    /api/v1/organizations/{id}/members`` — list members
+- ``DELETE /api/v1/organizations/{id}``         — delete the org (admin only)
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ from sqlalchemy.orm import Session
 from app.core.auth import CurrentUser, get_current_user
 from app.core.db import get_db
 from app.schemas.organizations import (
+    MemberOut,
     OrganizationCreateRequest,
     OrganizationJoinRequest,
     OrganizationOut,
@@ -25,10 +28,13 @@ from app.schemas.organizations import (
 )
 from app.services.organization_service import (
     OrganizationConflictError,
+    OrganizationForbiddenError,
     OrganizationNotFoundError,
     create_organization,
+    delete_organization,
     join_organization,
     leave_organization,
+    list_members,
     list_organizations,
     update_organization,
 )
@@ -140,4 +146,54 @@ def leave_org(
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc))
     except OrganizationConflictError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=str(exc))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ── Members ──────────────────────────────────────────────────────────
+
+
+@router.get(
+    "/organizations/{organization_id}/members",
+    response_model=list[MemberOut],
+    status_code=status.HTTP_200_OK,
+    summary="List members of an organization",
+)
+def get_members(
+    organization_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+) -> list[MemberOut]:
+    try:
+        return list_members(
+            db=db,
+            current_user=current_user,
+            organization_id=organization_id,
+        )
+    except OrganizationNotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+# ── Delete ───────────────────────────────────────────────────────────
+
+
+@router.delete(
+    "/organizations/{organization_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete an organization (admin only)",
+)
+def delete_org(
+    organization_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+) -> Response:
+    try:
+        delete_organization(
+            db=db,
+            current_user=current_user,
+            organization_id=organization_id,
+        )
+    except OrganizationNotFoundError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except OrganizationForbiddenError as exc:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=str(exc))
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -58,6 +58,18 @@ class DocumentMeta(CamelModel):
     created_at: datetime
 
 
+class DocumentDetail(DocumentMeta):
+    """Full document detail including extracted text (single-doc fetch)."""
+
+    title: Optional[str] = None
+    subject: Optional[str] = None
+    grade_band: Optional[str] = None
+    extracted_text: Optional[str] = Field(
+        default=None,
+        description="Full extracted text. None when extraction_status != EXTRACTED.",
+    )
+
+
 # ── Preview (GET /api/v1/documents/{id}/preview) ────────────────────
 
 class DocumentPreview(CamelModel):
@@ -68,4 +80,58 @@ class DocumentPreview(CamelModel):
     preview_truncated: bool
     char_count: int = Field(
         description="Length of the returned preview_text."
+    )
+
+
+# ── Library list item (GET /api/v1/documents?organization_id=…) ─────
+
+class DocumentLibraryItem(CamelModel):
+    """Summary row for a document in the Curriculum Library grid."""
+
+    document_id: UUID
+    title: Optional[str] = Field(
+        default=None,
+        description="User-given title; falls back to filename when None.",
+    )
+    filename: str
+    content_type: Optional[str] = None
+    size_bytes: Optional[int] = None
+    extraction_status: str
+    subject: Optional[str] = None
+    grade_band: Optional[str] = None
+    curriculum_set_id: Optional[UUID] = None
+    created_at: datetime
+    latest_analysis_run_id: Optional[UUID] = None
+    latest_analysis_status: Optional[str] = None
+
+
+# ── Patch request (PATCH /api/v1/documents/{document_id}) ───────────
+
+class DocumentUpdateRequest(CamelModel):
+    """Partial update of user-facing metadata on a document."""
+
+    title: Optional[str] = Field(
+        default=None, min_length=1, max_length=500,
+        description="Display title.",
+    )
+    subject: Optional[str] = Field(
+        default=None, max_length=255,
+        description="Subject area (send null to clear).",
+    )
+    grade_band: Optional[str] = Field(
+        default=None, max_length=100,
+        description="Grade band (send null to clear).",
+    )
+
+
+# ── Content update response (PATCH /api/v1/documents/{id}/content) ──
+
+class DocumentContentResponse(CamelModel):
+    """Returned after replacing document content."""
+
+    document_id: UUID
+    extraction_status: str
+    char_count: Optional[int] = Field(
+        default=None,
+        description="Character count of newly extracted / supplied text.",
     )

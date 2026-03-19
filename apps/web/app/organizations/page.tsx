@@ -9,6 +9,7 @@ import type { OrganizationCardData } from "@/components/OrganizationCard";
 import CreateOrganizationModal from "@/components/CreateOrganizationModal";
 import JoinOrganizationModal from "@/components/JoinOrganizationModal";
 import EditOrganizationModal from "@/components/EditOrganizationModal";
+import PeopleModal from "@/components/PeopleModal";
 import ConfirmDialog from "@/components/ConfirmDialog";
 
 /* ------------------------------------------------------------------ */
@@ -33,6 +34,13 @@ export default function OrganizationsPage() {
   const [leaveTarget, setLeaveTarget] = useState<OrganizationCardData | null>(null);
   const [leaveLoading, setLeaveLoading] = useState(false);
 
+  // Delete state
+  const [deleteTarget, setDeleteTarget] = useState<OrganizationCardData | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // People modal state
+  const [peopleTarget, setPeopleTarget] = useState<OrganizationCardData | null>(null);
+
   /* ── Fetch orgs ──────────────────────────────────────────────────── */
   const fetchOrganizations = useCallback(async () => {
     setLoading(true);
@@ -56,20 +64,20 @@ export default function OrganizationsPage() {
   /* ── Select & navigate ───────────────────────────────────────────── */
   function handleSelect(org: OrganizationCardData) {
     setOrg(org.organization_id, org.name);
-    router.push("/library");
+    router.push(`/library?organization_id=${org.organization_id}`);
   }
 
   /* ── Created / Joined handlers ───────────────────────────────────── */
   function handleCreated(org: { organization_id: string; name: string }) {
     setShowCreate(false);
     setOrg(org.organization_id, org.name);
-    router.push("/library");
+    router.push(`/library?organization_id=${org.organization_id}`);
   }
 
   function handleJoined(org: { organization_id: string; name: string }) {
     setShowJoin(false);
     setOrg(org.organization_id, org.name);
-    router.push("/library");
+    router.push(`/library?organization_id=${org.organization_id}`);
   }
 
   /* ── Edit saved ──────────────────────────────────────────────────── */
@@ -119,6 +127,39 @@ export default function OrganizationsPage() {
     } finally {
       setLeaveLoading(false);
       setLeaveTarget(null);
+    }
+  }
+
+  /* ── Delete confirm ──────────────────────────────────────────────── */
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      const res = await fetch(`/api/organizations/${deleteTarget.organization_id}`, {
+        method: "DELETE",
+      });
+      if (res.status === 403) {
+        const b = await res.json().catch(() => null);
+        alert(b?.detail ?? "Only the organization owner can delete.");
+        return;
+      }
+      if (!res.ok && res.status !== 204) {
+        throw new Error(`Error ${res.status}`);
+      }
+      // Remove from local list
+      setOrganizations((prev) =>
+        prev.filter((o) => o.organization_id !== deleteTarget.organization_id),
+      );
+      // If the deleted org was selected, clear and navigate
+      if (deleteTarget.organization_id === getOrgId()) {
+        clearOrg();
+        router.push("/organizations");
+      }
+    } catch {
+      alert("Failed to delete organization.");
+    } finally {
+      setDeleteLoading(false);
+      setDeleteTarget(null);
     }
   }
 
@@ -232,8 +273,10 @@ export default function OrganizationsPage() {
                 key={org.organization_id}
                 org={org}
                 onSelect={handleSelect}
+                onPeople={setPeopleTarget}
                 onEdit={setEditTarget}
                 onLeave={setLeaveTarget}
+                onDelete={setDeleteTarget}
               />
             ))}
           </div>
@@ -274,6 +317,22 @@ export default function OrganizationsPage() {
         loading={leaveLoading}
         onConfirm={handleLeaveConfirm}
         onCancel={() => setLeaveTarget(null)}
+      />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Organization"
+        description={`Are you sure you want to permanently delete "${deleteTarget?.name ?? ""}"? All documents, analysis runs, and members will be removed. This cannot be undone.`}
+        confirmLabel="Delete"
+        confirmVariant="danger"
+        loading={deleteLoading}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
+      />
+      <PeopleModal
+        open={!!peopleTarget}
+        organizationId={peopleTarget?.organization_id ?? ""}
+        organizationName={peopleTarget?.name ?? ""}
+        onClose={() => setPeopleTarget(null)}
       />
     </main>
   );

@@ -86,8 +86,9 @@ my-curriculum-engine/
 │       │   ├── page.tsx            # Redirects to /library
 │       │   ├── login/              # Google OAuth login
 │       │   ├── organizations/      # Org management page
-│       │   ├── library/            # Curriculum Sets list
+│       │   ├── library/            # Curriculum Library (documents + sets)
 │       │   ├── library/[setId]/    # Set detail + Upload & Analyze
+│       │   ├── analyze/            # Upload & Analyze form
 │       │   ├── results/[id]/       # Analysis results page
 │       │   ├── compare/            # Side-by-side comparison
 │       │   └── api/                # Proxy routes → backend
@@ -229,10 +230,13 @@ Frontend: **http://localhost:3000**
 
 | Method | Path | Auth | Description |
 |--------|------|:----:|-------------|
-| `POST` | `/api/v1/uploads` | ✅ | Upload file (multipart, optional `curriculum_set_id`) |
-| `GET`  | `/api/v1/documents/{id}` | ✅ | Document metadata |
-| `GET`  | `/api/v1/documents/{id}/preview` | ✅ | Truncated text preview |
-| `GET`  | `/api/v1/documents/{id}/download` | ✅ | Stream original file |
+| `POST`   | `/api/v1/uploads` | ✅ | Upload file (multipart, requires `organization_id`) |
+| `GET`    | `/api/v1/documents?organization_id=` | ✅ | List documents for org (library) |
+| `GET`    | `/api/v1/documents/{id}` | ✅ | Document metadata |
+| `PATCH`  | `/api/v1/documents/{id}` | ✅ | Update title/subject/grade_band |
+| `DELETE` | `/api/v1/documents/{id}` | ✅ | Soft-delete a document |
+| `GET`    | `/api/v1/documents/{id}/preview` | ✅ | Truncated text preview |
+| `GET`    | `/api/v1/documents/{id}/download` | ✅ | Stream original file |
 
 ### Analysis
 

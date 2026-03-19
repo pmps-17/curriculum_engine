@@ -4,6 +4,7 @@ import Link from "next/link";
 import { use, useMemo } from "react";
 import { useResultsQuery } from "@/features/results/hooks";
 import type { AnalysisResults } from "@/features/results/hooks";
+import { getOrgId } from "@/lib/orgStore";
 import PillarCards from "@/components/PillarCards";
 import SkillList from "@/components/SkillList";
 import EvidenceAccordion from "@/components/EvidenceAccordion";
@@ -150,7 +151,7 @@ export default function ResultsPage({
           {/* Contextual quick-links */}
           <div className="hidden items-center gap-2 sm:flex">
             <Link
-              href="/library"
+              href={`/library?organization_id=${getOrgId()}`}
               className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition hover:border-[#4F46E5]/30 hover:text-[#4F46E5]"
             >
               ← Library

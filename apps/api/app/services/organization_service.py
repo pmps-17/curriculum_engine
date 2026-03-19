@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.auth import CurrentUser
 from app.repositories.organization_repo import OrganizationRepo
 from app.schemas.organizations import (
+    MemberOut,
     OrganizationCreateRequest,
     OrganizationOut,
     OrganizationUpdateRequest,
@@ -34,12 +35,18 @@ class OrganizationConflictError(Exception):
     """Raised when leaving would orphan the organization (last member)."""
 
 
+class OrganizationForbiddenError(Exception):
+    """Raised when the caller lacks admin/owner privileges."""
+
+
 # ── Helpers ──────────────────────────────────────────────────────────
 
 
 def _org_to_out(
     org,
     *,
+    is_admin: bool = False,
+    member_count: int = 0,
     show_invite_code: bool = False,
 ) -> OrganizationOut:
     """Map an ORM Organization to the response schema."""
@@ -49,6 +56,8 @@ def _org_to_out(
         description=org.description,
         invite_code=org.invite_code if show_invite_code else None,
         created_at=org.created_at,
+        is_admin=is_admin,
+        member_count=member_count,
         contact_name=org.contact_name,
         contact_email=org.contact_email,
         country_name=org.country_name,
@@ -71,8 +80,18 @@ def list_organizations(
     repo = OrganizationRepo(db)
     user = repo.upsert_user(current_user.email)
     orgs = repo.list_for_user(user.id)
+
+    # Batch-fetch member counts
+    org_ids = [org.id for org in orgs]
+    counts = repo.member_counts_for_orgs(org_ids)
+
     return [
-        _org_to_out(org, show_invite_code=(org.owner_user_id == user.id))
+        _org_to_out(
+            org,
+            is_admin=(org.owner_user_id == user.id),
+            member_count=counts.get(org.id, 0),
+            show_invite_code=(org.owner_user_id == user.id),
+        )
         for org in orgs
     ]
 
@@ -107,7 +126,7 @@ def create_organization(
 
     db.commit()
     logger.info("Organization created: %s by %s", org.id, current_user.email)
-    return _org_to_out(org, show_invite_code=True)
+    return _org_to_out(org, is_admin=True, member_count=1, show_invite_code=True)
 
 
 def join_organization(
@@ -127,7 +146,14 @@ def join_organization(
     repo.add_member(organization_id=org.id, user_id=user.id)
     db.commit()
     logger.info("User %s joined organization %s", current_user.email, org.id)
-    return _org_to_out(org, show_invite_code=(org.owner_user_id == user.id))
+    is_admin = org.owner_user_id == user.id
+    member_count = repo.count_members(org.id)
+    return _org_to_out(
+        org,
+        is_admin=is_admin,
+        member_count=member_count,
+        show_invite_code=is_admin,
+    )
 
 
 def update_organization(
@@ -173,7 +199,14 @@ def update_organization(
         current_user.email,
         list(kwargs.keys()),
     )
-    return _org_to_out(org, show_invite_code=(org.owner_user_id == user.id))
+    is_admin = org.owner_user_id == user.id
+    member_count = repo.count_members(organization_id)
+    return _org_to_out(
+        org,
+        is_admin=is_admin,
+        member_count=member_count,
+        show_invite_code=is_admin,
+    )
 
 
 def leave_organization(
@@ -207,4 +240,70 @@ def leave_organization(
         "User %s left organization %s",
         current_user.email,
         organization_id,
+    )
+
+
+# ── List members ─────────────────────────────────────────────────────
+
+
+def list_members(
+    *,
+    db: Session,
+    current_user: CurrentUser,
+    organization_id: uuid.UUID,
+) -> list[MemberOut]:
+    """Return all members of an organization. Caller must be a member."""
+    repo = OrganizationRepo(db)
+    user = repo.upsert_user(current_user.email)
+
+    org = repo.get_by_id(organization_id)
+    if org is None or not repo.is_member(organization_id, user.id):
+        raise OrganizationNotFoundError("Organization not found.")
+
+    rows = repo.list_members(organization_id)
+    return [
+        MemberOut(
+            user_id=u.id,
+            email=u.email,
+            name=u.name,
+            role="admin" if u.id == org.owner_user_id else "member",
+            joined_at=m.created_at,
+        )
+        for u, m in rows
+    ]
+
+
+# ── Delete organization ─────────────────────────────────────────────
+
+
+def delete_organization(
+    *,
+    db: Session,
+    current_user: CurrentUser,
+    organization_id: uuid.UUID,
+) -> None:
+    """Delete an organization. Caller must be the admin/owner.
+
+    Raises:
+        OrganizationNotFoundError: org missing or not a member.
+        OrganizationForbiddenError: caller is not the owner.
+    """
+    repo = OrganizationRepo(db)
+    user = repo.upsert_user(current_user.email)
+
+    org = repo.get_by_id(organization_id)
+    if org is None or not repo.is_member(organization_id, user.id):
+        raise OrganizationNotFoundError("Organization not found.")
+
+    if org.owner_user_id != user.id:
+        raise OrganizationForbiddenError(
+            "Only the organization owner can delete this organization."
+        )
+
+    repo.delete_organization(organization_id)
+    db.commit()
+    logger.info(
+        "Organization %s deleted by %s",
+        organization_id,
+        current_user.email,
     )

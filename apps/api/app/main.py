@@ -10,7 +10,6 @@ from app.routers.results import router as results_router
 from app.routers.review import router as review_router
 from app.routers.uploads import router as uploads_router
 from app.routers.organizations import router as organizations_router
-from app.routers.curriculum_sets import router as curriculum_sets_router
 
 app = FastAPI(
     title="Curriculum Engine API",
@@ -27,4 +26,3 @@ app.include_router(results_router)
 app.include_router(review_router)
 app.include_router(uploads_router)
 app.include_router(organizations_router)
-app.include_router(curriculum_sets_router)

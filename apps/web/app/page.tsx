@@ -7,9 +7,8 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Root page always redirects to the Curriculum Library.
-    // AppShell handles the org-guard (no org → /organizations).
-    router.replace("/library");
+    // Root page always redirects to Organizations.
+    router.replace("/organizations");
   }, [router]);
 
   return null;

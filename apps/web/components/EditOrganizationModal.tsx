@@ -20,7 +20,7 @@ interface EditOrganizationModalProps {
   initialStateName?: string;
   initialCity?: string;
   onClose: () => void;
-  onSaved: (updated: { name: string; description: string | null }) => void;
+  onSaved: (updated: Record<string, unknown>) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -161,7 +161,7 @@ export default function EditOrganizationModal({
         throw new Error(b?.detail ?? `Error ${res.status}`);
       }
       const org = await res.json();
-      onSaved({ name: org.name, description: org.description ?? "" });
+      onSaved(org);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Save failed.");
     } finally {
